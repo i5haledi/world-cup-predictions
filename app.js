@@ -204,11 +204,54 @@ function drawText(context, text, x, y, options = {}) {
   context.fillText(text, x, y);
 }
 
+async function loadCanvasImage(url) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    if ("createImageBitmap" in window) return await createImageBitmap(blob);
+
+    const objectUrl = URL.createObjectURL(blob);
+    const image = new Image();
+    image.src = objectUrl;
+    await image.decode();
+    URL.revokeObjectURL(objectUrl);
+    return image;
+  } catch {
+    return null;
+  }
+}
+
+function drawFlag(context, image, x, y, width = 54, height = 38) {
+  context.save();
+  context.beginPath();
+  context.roundRect(x, y, width, height, 6);
+  context.clip();
+  if (image) {
+    context.drawImage(image, x, y, width, height);
+  } else {
+    context.fillStyle = "#26312c";
+    context.fillRect(x, y, width, height);
+  }
+  context.restore();
+  context.strokeStyle = "rgba(255,255,255,.18)";
+  context.lineWidth = 1;
+  context.beginPath();
+  context.roundRect(x, y, width, height, 6);
+  context.stroke();
+}
+
 async function createPredictionImage() {
   await document.fonts.ready;
+  const flags = await Promise.all(
+    matches.flatMap((match) => [
+      loadCanvasImage(match.home.flag),
+      loadCanvasImage(match.away.flag),
+    ])
+  );
   const width = 1080;
-  const rowHeight = 72;
-  const height = 260 + matches.length * rowHeight;
+  const rowHeight = 80;
+  const height = 220 + matches.length * rowHeight;
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -222,25 +265,43 @@ async function createPredictionImage() {
   drawText(context, "توقعات كأس العالم 2026", width - 70, 72, { size: 42, weight: 700 });
   drawText(context, activeRound.name, width - 70, 116, { size: 25, color: "#58e29b", weight: 600 });
   drawText(context, `اللاعب: ${state.name.trim()}`, width - 70, 172, { size: 29, weight: 600 });
-  drawText(context, "النتيجة الصحيحة 3 نقاط  |  الفائز أو التعادل نقطة واحدة", width - 70, 214, {
-    size: 21,
-    color: "#87948e",
-  });
 
   matches.forEach((match, index) => {
-    const y = 242 + index * rowHeight;
+    const y = 202 + index * rowHeight;
     const score = scoreFor(match);
+    const outcome = outcomeFor(match);
+    const cardHeight = rowHeight - 10;
     context.fillStyle = index % 2 ? "#0d1311" : "#121a17";
-    roundedRect(context, 50, y, width - 100, rowHeight - 8, 12);
+    roundedRect(context, 50, y, width - 100, cardHeight, 12);
 
-    drawText(context, match.home.name, width - 90, y + 42, { size: 23, weight: 600 });
-    drawText(context, `${score.home}  -  ${score.away}`, width / 2, y + 43, {
+    if (outcome === "home") {
+      context.fillStyle = "#164a35";
+      roundedRect(context, width / 2 + 72, y + 6, width / 2 - 128, cardHeight - 12, 10);
+    } else if (outcome === "away") {
+      context.fillStyle = "#164a35";
+      roundedRect(context, 56, y + 6, width / 2 - 128, cardHeight - 12, 10);
+    }
+
+    drawFlag(context, flags[index * 2], width - 130, y + 16);
+    drawFlag(context, flags[index * 2 + 1], 76, y + 16);
+
+    drawText(context, match.home.name, width - 150, y + 44, {
+      size: 22,
+      weight: outcome === "home" ? 700 : 600,
+      color: outcome === "home" ? "#8bf0b8" : "#f1f5f2",
+    });
+    drawText(context, `${score.home}  -  ${score.away}`, width / 2, y + 46, {
       size: 29,
       weight: 700,
       color: "#d7f45c",
       align: "center",
     });
-    drawText(context, match.away.name, 90, y + 42, { size: 23, weight: 600, align: "left" });
+    drawText(context, match.away.name, 150, y + 44, {
+      size: 22,
+      weight: outcome === "away" ? 700 : 600,
+      color: outcome === "away" ? "#8bf0b8" : "#f1f5f2",
+      align: "left",
+    });
   });
 
   return new Promise((resolve) => canvas.toBlob(resolve, "image/png", 0.95));

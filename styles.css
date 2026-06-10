@@ -44,10 +44,10 @@ main { width: min(100% - 40px, 980px); margin-inline: auto; padding: 20px 0 42px
 .top-bar { display: flex; align-items: center; justify-content: flex-end; gap: 14px; margin-bottom: 12px; }
 .section-kicker { color: var(--green); font-size: 11px; font-weight: 700; }
 .rules { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-.rule { display: grid; grid-template-columns: 46px 1fr auto; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: rgba(18,26,23,.82); }
-.rule strong { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 11px; color: #09100d; background: var(--lime); font-size: 21px; }
+.rule { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: rgba(18,26,23,.82); }
+.rule strong { display: inline-flex; min-width: 82px; height: 42px; align-items: center; justify-content: center; gap: 5px; padding: 0 12px; border-radius: 11px; color: #09100d; background: var(--lime); font-size: 12px; white-space: nowrap; }
 .rule span { color: #c8d0cc; font-size: 13px; line-height: 1.5; }
-.rule b { color: var(--green); font-size: 12px; }
+.rule strong > span { color: inherit; font-family: Arial, sans-serif; font-size: 21px; font-weight: 800; line-height: 1; }
 .player-field { width: min(100%,460px); margin: 18px 0 0 auto; }
 .player-field label { display: block; margin: 0 4px 7px; color: var(--muted); font-size: 12px; font-weight: 600; }
 .name-input-wrap { display: flex; align-items: center; gap: 11px; padding: 0 16px; border: 1px solid var(--line); border-radius: 14px; background: rgba(18,26,23,.82); transition: 180ms ease; }
