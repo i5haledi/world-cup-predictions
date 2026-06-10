@@ -2,6 +2,7 @@ const STORAGE_KEY = "world-picks-2026";
 const state = loadState();
 let matches = [];
 let activeRound = null;
+let shareBlob = null;
 
 const matchesList = document.querySelector("#matches-list");
 const playerName = document.querySelector("#player-name");
@@ -12,11 +13,12 @@ const submitPanel = document.querySelector(".submit-panel");
 const submitTitle = document.querySelector("#submit-title");
 const submitHint = document.querySelector("#submit-hint");
 const submitButton = document.querySelector("#submit-button");
+const submitLabel = document.querySelector("#submit-label");
 const resultDialog = document.querySelector("#result-dialog");
 const closeDialog = document.querySelector("#close-dialog");
-const shareText = document.querySelector("#share-text");
+const shareImage = document.querySelector("#share-image");
 const shareButton = document.querySelector("#share-button");
-const copyButton = document.querySelector("#copy-button");
+const downloadButton = document.querySelector("#download-button");
 const toast = document.querySelector("#toast");
 const roundName = document.querySelector("#round-name");
 const roundKicker = document.querySelector("#round-kicker");
@@ -27,12 +29,13 @@ playerName.value = state.name;
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return {
-      name: saved?.name || "",
-      picks: saved?.picks || {},
-    };
+    const scores = {};
+    for (const [key, value] of Object.entries(saved?.scores || {})) {
+      if (value && typeof value === "object") scores[key] = value;
+    }
+    return { name: saved?.name || "", scores };
   } catch {
-    return { name: "", picks: {} };
+    return { name: "", scores: {} };
   }
 }
 
@@ -63,6 +66,23 @@ function matchKey(match) {
   return String(match.id);
 }
 
+function scoreFor(match) {
+  return state.scores[matchKey(match)] || { home: "", away: "" };
+}
+
+function isComplete(match) {
+  const score = scoreFor(match);
+  return score.home !== "" && score.away !== "";
+}
+
+function outcomeFor(match) {
+  if (!isComplete(match)) return null;
+  const score = scoreFor(match);
+  if (Number(score.home) > Number(score.away)) return "home";
+  if (Number(score.home) < Number(score.away)) return "away";
+  return "draw";
+}
+
 function renderLoading() {
   matchesList.innerHTML = Array.from({ length: 4 }, () => `
     <div class="match-card skeleton-card" aria-hidden="true">
@@ -88,108 +108,152 @@ function renderError(message) {
 }
 
 function renderMatches() {
-  matchesList.innerHTML = matches
-    .map((match, index) => {
-      const currentPick = state.picks[matchKey(match)];
-      return `
-        <article class="match-card">
-          <div class="team-pick home">
-            <button
-              class="pick-button ${currentPick === "home" ? "selected" : ""}"
-              type="button"
-              data-match="${match.id}"
-              data-pick="home"
-              aria-pressed="${currentPick === "home"}"
-              aria-label="اختيار ${escapeHtml(match.home.name)} للفوز"
-            >
-              <span class="flag-frame">
-                <img class="flag" src="${match.home.flag}" alt="${escapeHtml(match.home.name)} flag" />
-              </span>
-              <span class="team-name">${escapeHtml(match.home.name)}</span>
-              <span class="team-code">${escapeHtml(match.home.code)}</span>
-            </button>
-          </div>
+  matchesList.innerHTML = matches.map((match, index) => {
+    const score = scoreFor(match);
+    const outcome = outcomeFor(match);
+    return `
+      <article class="match-card ${outcome ? "completed" : ""}">
+        <div class="team-side ${outcome === "home" ? "winner" : ""}">
+          <span class="flag-frame">
+            <img class="flag" src="${match.home.flag}" alt="علم ${escapeHtml(match.home.name)}" />
+          </span>
+          <span class="team-name">${escapeHtml(match.home.name)}</span>
+          <input
+            class="score-input"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            max="20"
+            step="1"
+            value="${score.home}"
+            data-match="${match.id}"
+            data-team="home"
+            aria-label="أهداف ${escapeHtml(match.home.name)}"
+          />
+        </div>
 
-          <div class="match-meta">
-            <span class="match-number">المباراة ${index + 1}</span>
-            <span class="kickoff">${formatKickoff(match.kickoff)}</span>
-            <button
-              class="draw-button ${currentPick === "draw" ? "selected" : ""}"
-              type="button"
-              data-match="${match.id}"
-              data-pick="draw"
-              aria-pressed="${currentPick === "draw"}"
-            >
-              تعادل
-            </button>
-          </div>
+        <div class="match-meta">
+          <span class="match-number">المباراة ${index + 1}</span>
+          <span class="kickoff">${formatKickoff(match.kickoff)}</span>
+          <span class="outcome-label">${outcome === "draw" ? "تعادل" : outcome ? "فوز" : "النتيجة"}</span>
+        </div>
 
-          <div class="team-pick away">
-            <button
-              class="pick-button ${currentPick === "away" ? "selected" : ""}"
-              type="button"
-              data-match="${match.id}"
-              data-pick="away"
-              aria-pressed="${currentPick === "away"}"
-              aria-label="اختيار ${escapeHtml(match.away.name)} للفوز"
-            >
-              <span class="flag-frame">
-                <img class="flag" src="${match.away.flag}" alt="${escapeHtml(match.away.name)} flag" />
-              </span>
-              <span class="team-name">${escapeHtml(match.away.name)}</span>
-              <span class="team-code">${escapeHtml(match.away.code)}</span>
-            </button>
-          </div>
-        </article>
-      `;
-    })
-    .join("");
+        <div class="team-side away ${outcome === "away" ? "winner" : ""}">
+          <span class="flag-frame">
+            <img class="flag" src="${match.away.flag}" alt="علم ${escapeHtml(match.away.name)}" />
+          </span>
+          <span class="team-name">${escapeHtml(match.away.name)}</span>
+          <input
+            class="score-input"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            max="20"
+            step="1"
+            value="${score.away}"
+            data-match="${match.id}"
+            data-team="away"
+            aria-label="أهداف ${escapeHtml(match.away.name)}"
+          />
+        </div>
+      </article>
+    `;
+  }).join("");
 }
 
 function updateProgress() {
-  const completed = matches.filter((match) => state.picks[matchKey(match)]).length;
+  const completed = matches.filter(isComplete).length;
   const total = matches.length;
-  const isComplete = total > 0 && completed === total;
+  const allComplete = total > 0 && completed === total;
   const hasName = state.name.trim().length > 0;
 
   progressCount.textContent = `${completed} / ${total}`;
   progressBar.style.width = total ? `${(completed / total) * 100}%` : "0%";
   progressTrack.setAttribute("aria-valuemax", total);
   progressTrack.setAttribute("aria-valuenow", completed);
-  submitPanel.classList.toggle("ready", isComplete && hasName);
-  submitButton.disabled = !isComplete || !hasName;
+  submitPanel.classList.toggle("ready", allComplete && hasName);
+  submitButton.disabled = !allComplete || !hasName;
 
   if (!total) {
     submitTitle.textContent = "جاري تحميل المباريات";
     submitHint.textContent = "يتم جلب جدول المباريات مباشرة.";
-  } else if (!isComplete) {
+  } else if (!allComplete) {
     const remaining = total - completed;
     submitTitle.textContent = `متبقي ${remaining} ${remaining === 1 ? "مباراة" : "مباريات"}`;
-    submitHint.textContent = "يتم حفظ اختياراتك تلقائياً.";
+    submitHint.textContent = "أدخل نتيجة رقمية لكل مباراة.";
   } else if (!hasName) {
     submitTitle.textContent = "اكتب اسمك للإرسال";
-    submitHint.textContent = "اكتملت جميع اختياراتك.";
+    submitHint.textContent = "اكتملت جميع النتائج.";
   } else {
     submitTitle.textContent = "اكتملت جميع التوقعات";
-    submitHint.textContent = "راجعها ثم أرسلها للمجموعة.";
+    submitHint.textContent = "أنشئ صورة التوقعات وشاركها.";
   }
 }
 
-function makeSummary() {
-  const lines = matches.map((match, index) => {
-    const pick = state.picks[matchKey(match)];
-    const choice = pick === "home" ? match.home.name : pick === "away" ? match.away.name : "تعادل";
-    return `${index + 1}. ${match.home.name} ضد ${match.away.name}: ${choice}`;
+function roundedRect(context, x, y, width, height, radius) {
+  context.beginPath();
+  context.roundRect(x, y, width, height, radius);
+  context.fill();
+}
+
+function drawText(context, text, x, y, options = {}) {
+  context.fillStyle = options.color || "#f1f5f2";
+  context.font = `${options.weight || 500} ${options.size || 28}px "IBM Plex Sans Arabic", Arial`;
+  context.textAlign = options.align || "right";
+  context.direction = "rtl";
+  context.fillText(text, x, y);
+}
+
+async function createPredictionImage() {
+  await document.fonts.ready;
+  const width = 1080;
+  const rowHeight = 72;
+  const height = 260 + matches.length * rowHeight;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+
+  context.fillStyle = "#070b0a";
+  context.fillRect(0, 0, width, height);
+  context.fillStyle = "#58e29b";
+  context.fillRect(0, 0, 12, height);
+
+  drawText(context, "توقعات كأس العالم 2026", width - 70, 72, { size: 42, weight: 700 });
+  drawText(context, activeRound.name, width - 70, 116, { size: 25, color: "#58e29b", weight: 600 });
+  drawText(context, `اللاعب: ${state.name.trim()}`, width - 70, 172, { size: 29, weight: 600 });
+  drawText(context, "النتيجة الصحيحة 3 نقاط  |  الفائز أو التعادل نقطة واحدة", width - 70, 214, {
+    size: 21,
+    color: "#87948e",
   });
 
-  return [
-    `توقعات كأس العالم 2026 - ${activeRound.name}`,
-    `اللاعب: ${state.name.trim()}`,
-    "",
-    ...lines,
-    "",
-    "تم اعتماد التوقعات.",
-  ].join("\n");
+  matches.forEach((match, index) => {
+    const y = 242 + index * rowHeight;
+    const score = scoreFor(match);
+    context.fillStyle = index % 2 ? "#0d1311" : "#121a17";
+    roundedRect(context, 50, y, width - 100, rowHeight - 8, 12);
+
+    drawText(context, match.home.name, width - 90, y + 42, { size: 23, weight: 600 });
+    drawText(context, `${score.home}  -  ${score.away}`, width / 2, y + 43, {
+      size: 29,
+      weight: 700,
+      color: "#d7f45c",
+      align: "center",
+    });
+    drawText(context, match.away.name, 90, y + 42, { size: 23, weight: 600, align: "left" });
+  });
+
+  return new Promise((resolve) => canvas.toBlob(resolve, "image/png", 0.95));
+}
+
+function downloadImage() {
+  if (!shareBlob) return;
+  const url = URL.createObjectURL(shareBlob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `توقعات-${state.name.trim() || "كأس-العالم"}.png`;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function showToast(message) {
@@ -198,54 +262,52 @@ function showToast(message) {
   window.setTimeout(() => toast.classList.remove("visible"), 2200);
 }
 
-async function copySummary() {
-  try {
-    await navigator.clipboard.writeText(shareText.value);
-    copyButton.textContent = "تم النسخ";
-    showToast("تم نسخ التوقعات");
-    window.setTimeout(() => {
-      copyButton.textContent = "نسخ النص";
-    }, 1800);
-  } catch {
-    shareText.select();
-    document.execCommand("copy");
-    showToast("تم نسخ التوقعات");
-  }
-}
-
 async function loadMatches() {
   renderLoading();
   dataStatus.textContent = "جاري تحميل المباريات";
-  dataStatus.classList.add("loading");
 
   try {
     const response = await fetch("/api/matches", { cache: "no-store" });
     if (!response.ok) throw new Error("خدمة المباريات غير متاحة مؤقتاً.");
-
     const data = await response.json();
     matches = data.matches;
     activeRound = data.round;
     roundName.textContent = activeRound.name;
     roundKicker.textContent = activeRound.label;
     dataStatus.textContent = data.cached ? "بيانات محفوظة مؤقتاً" : "بيانات مباشرة";
-    dataStatus.classList.remove("loading");
     renderMatches();
     updateProgress();
   } catch (error) {
     matches = [];
     dataStatus.textContent = "خطأ في الاتصال";
-    dataStatus.classList.remove("loading");
     renderError(error.message);
     updateProgress();
   }
 }
 
-matchesList.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-match]");
-  if (!button) return;
-  state.picks[button.dataset.match] = button.dataset.pick;
+matchesList.addEventListener("input", (event) => {
+  const input = event.target.closest(".score-input");
+  if (!input) return;
+
+  const numericValue = Number(input.value);
+  const value =
+    input.value === "" || !Number.isFinite(numericValue)
+      ? ""
+      : String(Math.max(0, Math.min(20, numericValue)));
+  input.value = value;
+  const score = state.scores[input.dataset.match] || { home: "", away: "" };
+  score[input.dataset.team] = value;
+  state.scores[input.dataset.match] = score;
   saveState();
-  renderMatches();
+
+  const match = matches.find((item) => String(item.id) === input.dataset.match);
+  const card = input.closest(".match-card");
+  const outcome = outcomeFor(match);
+  card.classList.toggle("completed", Boolean(outcome));
+  card.querySelector(".team-side:not(.away)").classList.toggle("winner", outcome === "home");
+  card.querySelector(".team-side.away").classList.toggle("winner", outcome === "away");
+  card.querySelector(".outcome-label").textContent =
+    outcome === "draw" ? "تعادل" : outcome ? "فوز" : "النتيجة";
   updateProgress();
 });
 
@@ -255,8 +317,13 @@ playerName.addEventListener("input", () => {
   updateProgress();
 });
 
-submitButton.addEventListener("click", () => {
-  shareText.value = makeSummary();
+submitButton.addEventListener("click", async () => {
+  submitButton.disabled = true;
+  submitLabel.textContent = "جاري إنشاء الصورة";
+  shareBlob = await createPredictionImage();
+  shareImage.src = URL.createObjectURL(shareBlob);
+  submitLabel.textContent = "إرسال التوقعات";
+  submitButton.disabled = false;
   resultDialog.showModal();
 });
 
@@ -266,19 +333,24 @@ resultDialog.addEventListener("click", (event) => {
 });
 
 shareButton.addEventListener("click", async () => {
-  const summary = shareText.value;
-  if (navigator.share) {
+  if (!shareBlob) return;
+  const file = new File([shareBlob], `توقعات-${state.name.trim()}.png`, { type: "image/png" });
+  if (navigator.share && navigator.canShare?.({ files: [file] })) {
     try {
-      await navigator.share({ title: `توقعات كأس العالم - ${activeRound.name}`, text: summary });
+      await navigator.share({
+        title: `توقعات كأس العالم - ${activeRound.name}`,
+        files: [file],
+      });
+      return;
     } catch (error) {
-      if (error.name !== "AbortError") await copySummary();
+      if (error.name === "AbortError") return;
     }
-    return;
   }
-  window.open(`https://wa.me/?text=${encodeURIComponent(summary)}`, "_blank", "noopener,noreferrer");
+  downloadImage();
+  showToast("تم تنزيل الصورة لمشاركتها");
 });
 
-copyButton.addEventListener("click", copySummary);
+downloadButton.addEventListener("click", downloadImage);
 renderLoading();
 updateProgress();
 loadMatches();
