@@ -3,6 +3,7 @@ const state = loadState();
 let matches = [];
 let activeRound = null;
 let shareBlob = null;
+let roundTimer = null;
 
 const matchesList = document.querySelector("#matches-list");
 const playerName = document.querySelector("#player-name");
@@ -125,6 +126,7 @@ function renderMatches() {
             max="20"
             step="1"
             value="${score.home}"
+            ${activeRound.locked ? "disabled" : ""}
             data-match="${match.id}"
             data-team="home"
             aria-label="أهداف ${escapeHtml(match.home.name)}"
@@ -150,6 +152,7 @@ function renderMatches() {
             max="20"
             step="1"
             value="${score.away}"
+            ${activeRound.locked ? "disabled" : ""}
             data-match="${match.id}"
             data-team="away"
             aria-label="أهداف ${escapeHtml(match.away.name)}"
@@ -165,15 +168,19 @@ function updateProgress() {
   const total = matches.length;
   const allComplete = total > 0 && completed === total;
   const hasName = state.name.trim().length > 0;
+  const isLocked = Boolean(activeRound?.locked);
 
   progressCount.textContent = `${completed} / ${total}`;
   progressBar.style.width = total ? `${(completed / total) * 100}%` : "0%";
   progressTrack.setAttribute("aria-valuemax", total);
   progressTrack.setAttribute("aria-valuenow", completed);
-  submitPanel.classList.toggle("ready", allComplete && hasName);
-  submitButton.disabled = !allComplete || !hasName;
+  submitPanel.classList.toggle("ready", allComplete && hasName && !isLocked);
+  submitButton.disabled = !allComplete || !hasName || isLocked;
 
-  if (!total) {
+  if (isLocked) {
+    submitTitle.textContent = "أُغلقت توقعات هذه الجولة";
+    submitHint.textContent = "بدأت أول مباراة ولا يمكن تعديل أو إرسال التوقعات.";
+  } else if (!total) {
     submitTitle.textContent = "جاري تحميل المباريات";
     submitHint.textContent = "يتم جلب جدول المباريات مباشرة.";
   } else if (!allComplete) {
@@ -187,6 +194,28 @@ function updateProgress() {
     submitTitle.textContent = "اكتملت جميع التوقعات";
     submitHint.textContent = "أنشئ صورة التوقعات وشاركها.";
   }
+}
+
+function scheduleRoundClosure() {
+  window.clearTimeout(roundTimer);
+  if (!activeRound?.closesAt || activeRound.locked) return;
+
+  const serverTime = activeRound.serverTime
+    ? new Date(activeRound.serverTime).getTime()
+    : Date.now();
+  const delay = new Date(activeRound.closesAt).getTime() - serverTime;
+  if (delay <= 0) {
+    loadMatches();
+    return;
+  }
+
+  roundTimer = window.setTimeout(() => {
+    submitButton.disabled = true;
+    matchesList.querySelectorAll(".score-input").forEach((input) => {
+      input.disabled = true;
+    });
+    loadMatches();
+  }, Math.min(delay + 250, 2147483647));
 }
 
 function roundedRect(context, x, y, width, height, radius) {
@@ -340,6 +369,7 @@ async function loadMatches() {
     roundKicker.textContent = activeRound.label;
     renderMatches();
     updateProgress();
+    scheduleRoundClosure();
   } catch (error) {
     matches = [];
     renderError(error.message);

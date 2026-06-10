@@ -59,26 +59,30 @@ function selectRound(fixtures) {
   }
 
   const orderedRounds = [...grouped.entries()].sort(([a], [b]) => a - b);
-  const active =
-    orderedRounds.find(([, games]) =>
-      games.some((game) => !game.matchIsFinished && new Date(game.matchDateTimeUTC).getTime() >= now)
-    ) || orderedRounds.at(-1);
-
-  return active;
+  const roundsWithStart = orderedRounds.map(([round, games]) => ({
+    round,
+    games,
+    startsAt: Math.min(...games.map((game) => new Date(game.matchDateTimeUTC).getTime())),
+  }));
+  const availableRound = roundsWithStart.find(({ startsAt }) => startsAt > now);
+  return availableRound || { ...roundsWithStart.at(-1), locked: true };
 }
 
 async function getMatches() {
   const canUseCache = fixtureCache && Date.now() - fixtureCacheTime < CACHE_TIME;
-  if (canUseCache) return { ...fixtureCache, cached: true };
+  if (!canUseCache) {
+    const response = await fetch(API_URL, {
+      headers: { "User-Agent": "World-Picks/1.0" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) throw new Error(`OpenLigaDB returned ${response.status}`);
+    fixtureCache = await response.json();
+    fixtureCacheTime = Date.now();
+  }
 
-  const response = await fetch(API_URL, {
-    headers: { "User-Agent": "World-Picks/1.0" },
-    signal: AbortSignal.timeout(8000),
-  });
-  if (!response.ok) throw new Error(`OpenLigaDB returned ${response.status}`);
-
-  const fixtures = await response.json();
-  const [roundNumber, roundFixtures] = selectRound(fixtures);
+  const selectedRound = selectRound(fixtureCache);
+  const roundNumber = selectedRound.round;
+  const roundFixtures = selectedRound.games;
   const matches = roundFixtures
     .sort((a, b) => new Date(a.matchDateTimeUTC) - new Date(b.matchDateTimeUTC))
     .map((fixture) => ({
@@ -88,7 +92,7 @@ async function getMatches() {
       away: normalizeTeam(fixture.team2),
     }));
 
-  fixtureCache = {
+  return {
     round: {
       number: roundNumber,
       name:
@@ -96,11 +100,13 @@ async function getMatches() {
           ? `الجولة ${roundNumber}`
           : `الدور ${roundNumber}`,
       label: roundNumber <= 3 ? "دور المجموعات" : "كأس العالم 2026",
+      closesAt: new Date(selectedRound.startsAt).toISOString(),
+      serverTime: new Date().toISOString(),
+      locked: Boolean(selectedRound.locked),
     },
     matches,
+    cached: canUseCache,
   };
-  fixtureCacheTime = Date.now();
-  return { ...fixtureCache, cached: false };
 }
 
 createServer(async (request, response) => {
