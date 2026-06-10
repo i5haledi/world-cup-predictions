@@ -1,17 +1,17 @@
 <!doctype html>
-<html lang="en">
+<html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Pick the winners, submit your predictions, and share them with friends."
+      content="توقع نتائج مباريات كأس العالم وشارك اختياراتك مع أصدقائك."
     />
-    <title>World Picks</title>
+    <title>توقعات كأس العالم</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
@@ -20,28 +20,9 @@
     <div class="page-glow page-glow-one"></div>
     <div class="page-glow page-glow-two"></div>
 
-    <header class="site-header">
-      <a class="brand" href="#" aria-label="World Picks home">
-        <span class="brand-mark">WP</span>
-        <span>World Picks</span>
-      </a>
-      <div class="round-pill">
-        <span class="live-dot"></span>
-        <span id="data-status">Syncing fixtures</span>
-      </div>
-    </header>
-
     <main>
-      <section class="hero">
-        <div class="eyebrow">Friends prediction league</div>
-        <h1>Call the matches.<br /><span>Claim the glory.</span></h1>
-        <p>
-          Pick a winner or call a draw for every match. Your choices save
-          automatically on this device.
-        </p>
-
+      <section class="top-bar">
         <div class="player-field">
-          <label for="player-name">Your name</label>
           <div class="name-input-wrap">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8Zm-7 18a7 7 0 0 1 14 0"/>
@@ -52,28 +33,32 @@
               type="text"
               maxlength="30"
               autocomplete="name"
-              placeholder="Enter your name"
+              placeholder="اكتب اسمك"
             />
           </div>
+        </div>
+        <div class="round-pill">
+          <span class="live-dot"></span>
+          <span id="data-status">جاري تحميل المباريات</span>
         </div>
       </section>
 
       <section class="predictions" aria-labelledby="matches-title">
         <div class="section-heading">
           <div>
-            <span id="round-kicker" class="section-kicker">World Cup 2026</span>
-            <h2 id="matches-title">Make your picks <span id="round-name"></span></h2>
+            <span id="round-kicker" class="section-kicker">كأس العالم 2026</span>
+            <h1 id="matches-title"><span id="round-name"></span></h1>
           </div>
           <div class="progress-copy">
             <strong id="progress-count">0 / 0</strong>
-            <span>completed</span>
+            <span>تم اختيارها</span>
           </div>
         </div>
 
         <div
           class="progress-track"
           role="progressbar"
-          aria-label="Prediction progress"
+          aria-label="تقدم التوقعات"
           aria-valuemin="0"
           aria-valuemax="0"
           aria-valuenow="0"
@@ -90,41 +75,36 @@
             <svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>
           </span>
           <div>
-            <strong id="submit-title">Loading real fixtures</strong>
-            <span id="submit-hint">Your progress is saved automatically.</span>
+            <strong id="submit-title">جاري تحميل المباريات</strong>
+            <span id="submit-hint">يتم حفظ اختياراتك تلقائياً.</span>
           </div>
         </div>
         <button id="submit-button" class="submit-button" type="button" disabled>
-          Submit predictions
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+          إرسال التوقعات
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg>
         </button>
       </section>
     </main>
 
-    <footer>
-      <span>WORLD PICKS 2026</span>
-      <span>Made for bragging rights</span>
-    </footer>
-
     <dialog id="result-dialog">
       <div class="dialog-content">
-        <button id="close-dialog" class="close-button" type="button" aria-label="Close">
+        <button id="close-dialog" class="close-button" type="button" aria-label="إغلاق">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
         </button>
         <div class="success-mark">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
         </div>
-        <span class="section-kicker">Prediction locked</span>
-        <h2>Ready to send</h2>
-        <p>Share this prediction card in your group chat.</p>
-        <textarea id="share-text" readonly aria-label="Prediction summary"></textarea>
+        <span class="section-kicker">اكتملت التوقعات</span>
+        <h2>جاهزة للمشاركة</h2>
+        <p>شارك توقعاتك في مجموعة الأصدقاء.</p>
+        <textarea id="share-text" readonly aria-label="ملخص التوقعات"></textarea>
         <div class="dialog-actions">
           <button id="share-button" class="submit-button" type="button">
-            Share predictions
+            مشاركة التوقعات
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5m0-5-9 9M5 8v11h11"/></svg>
           </button>
           <button id="copy-button" class="secondary-button" type="button">
-            Copy text
+            نسخ النص
           </button>
         </div>
       </div>

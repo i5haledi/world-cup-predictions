@@ -50,7 +50,7 @@ function escapeHtml(value) {
 }
 
 function formatKickoff(value) {
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat("ar-SA", {
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -79,9 +79,9 @@ function renderError(message) {
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M12 9v4m0 4h.01M10.3 3.8 2.2 18a2 2 0 0 0 1.7 3h16.2a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0Z"/>
       </svg>
-      <strong>Could not load the fixtures</strong>
+      <strong>تعذر تحميل المباريات</strong>
       <span>${escapeHtml(message)}</span>
-      <button id="retry-button" class="secondary-button" type="button">Try again</button>
+      <button id="retry-button" class="secondary-button" type="button">إعادة المحاولة</button>
     </div>
   `;
   document.querySelector("#retry-button").addEventListener("click", loadMatches);
@@ -100,7 +100,7 @@ function renderMatches() {
               data-match="${match.id}"
               data-pick="home"
               aria-pressed="${currentPick === "home"}"
-              aria-label="Pick ${escapeHtml(match.home.name)} to win"
+              aria-label="اختيار ${escapeHtml(match.home.name)} للفوز"
             >
               <span class="flag-frame">
                 <img class="flag" src="${match.home.flag}" alt="${escapeHtml(match.home.name)} flag" />
@@ -111,7 +111,7 @@ function renderMatches() {
           </div>
 
           <div class="match-meta">
-            <span class="match-number">Match ${String(index + 1).padStart(2, "0")}</span>
+            <span class="match-number">المباراة ${index + 1}</span>
             <span class="kickoff">${formatKickoff(match.kickoff)}</span>
             <button
               class="draw-button ${currentPick === "draw" ? "selected" : ""}"
@@ -120,7 +120,7 @@ function renderMatches() {
               data-pick="draw"
               aria-pressed="${currentPick === "draw"}"
             >
-              Draw
+              تعادل
             </button>
           </div>
 
@@ -131,7 +131,7 @@ function renderMatches() {
               data-match="${match.id}"
               data-pick="away"
               aria-pressed="${currentPick === "away"}"
-              aria-label="Pick ${escapeHtml(match.away.name)} to win"
+              aria-label="اختيار ${escapeHtml(match.away.name)} للفوز"
             >
               <span class="flag-frame">
                 <img class="flag" src="${match.away.flag}" alt="${escapeHtml(match.away.name)} flag" />
@@ -160,35 +160,35 @@ function updateProgress() {
   submitButton.disabled = !isComplete || !hasName;
 
   if (!total) {
-    submitTitle.textContent = "Loading real fixtures";
-    submitHint.textContent = "Connected to OpenLigaDB.";
+    submitTitle.textContent = "جاري تحميل المباريات";
+    submitHint.textContent = "يتم جلب جدول المباريات مباشرة.";
   } else if (!isComplete) {
     const remaining = total - completed;
-    submitTitle.textContent = `Complete ${remaining} more ${remaining === 1 ? "match" : "matches"}`;
-    submitHint.textContent = "Your progress is saved automatically.";
+    submitTitle.textContent = `متبقي ${remaining} ${remaining === 1 ? "مباراة" : "مباريات"}`;
+    submitHint.textContent = "يتم حفظ اختياراتك تلقائياً.";
   } else if (!hasName) {
-    submitTitle.textContent = "Add your name to submit";
-    submitHint.textContent = "Your picks are complete.";
+    submitTitle.textContent = "اكتب اسمك للإرسال";
+    submitHint.textContent = "اكتملت جميع اختياراتك.";
   } else {
-    submitTitle.textContent = "All predictions complete";
-    submitHint.textContent = "Review and send them to the group.";
+    submitTitle.textContent = "اكتملت جميع التوقعات";
+    submitHint.textContent = "راجعها ثم أرسلها للمجموعة.";
   }
 }
 
 function makeSummary() {
   const lines = matches.map((match, index) => {
     const pick = state.picks[matchKey(match)];
-    const choice = pick === "home" ? match.home.name : pick === "away" ? match.away.name : "Draw";
-    return `${index + 1}. ${match.home.name} vs ${match.away.name}: ${choice}`;
+    const choice = pick === "home" ? match.home.name : pick === "away" ? match.away.name : "تعادل";
+    return `${index + 1}. ${match.home.name} ضد ${match.away.name}: ${choice}`;
   });
 
   return [
-    `WORLD PICKS 2026 - ${activeRound.name.toUpperCase()}`,
-    `Player: ${state.name.trim()}`,
+    `توقعات كأس العالم 2026 - ${activeRound.name}`,
+    `اللاعب: ${state.name.trim()}`,
     "",
     ...lines,
     "",
-    "Predictions locked.",
+    "تم اعتماد التوقعات.",
   ].join("\n");
 }
 
@@ -201,39 +201,39 @@ function showToast(message) {
 async function copySummary() {
   try {
     await navigator.clipboard.writeText(shareText.value);
-    copyButton.textContent = "Copied";
-    showToast("Prediction text copied");
+    copyButton.textContent = "تم النسخ";
+    showToast("تم نسخ التوقعات");
     window.setTimeout(() => {
-      copyButton.textContent = "Copy text";
+      copyButton.textContent = "نسخ النص";
     }, 1800);
   } catch {
     shareText.select();
     document.execCommand("copy");
-    showToast("Prediction text copied");
+    showToast("تم نسخ التوقعات");
   }
 }
 
 async function loadMatches() {
   renderLoading();
-  dataStatus.textContent = "Syncing fixtures";
+  dataStatus.textContent = "جاري تحميل المباريات";
   dataStatus.classList.add("loading");
 
   try {
     const response = await fetch("/api/matches", { cache: "no-store" });
-    if (!response.ok) throw new Error("The fixture service is temporarily unavailable.");
+    if (!response.ok) throw new Error("خدمة المباريات غير متاحة مؤقتاً.");
 
     const data = await response.json();
     matches = data.matches;
     activeRound = data.round;
     roundName.textContent = activeRound.name;
     roundKicker.textContent = activeRound.label;
-    dataStatus.textContent = data.cached ? "Cached live data" : "Live match data";
+    dataStatus.textContent = data.cached ? "بيانات محفوظة مؤقتاً" : "بيانات مباشرة";
     dataStatus.classList.remove("loading");
     renderMatches();
     updateProgress();
   } catch (error) {
     matches = [];
-    dataStatus.textContent = "Connection error";
+    dataStatus.textContent = "خطأ في الاتصال";
     dataStatus.classList.remove("loading");
     renderError(error.message);
     updateProgress();
@@ -269,7 +269,7 @@ shareButton.addEventListener("click", async () => {
   const summary = shareText.value;
   if (navigator.share) {
     try {
-      await navigator.share({ title: `World Picks - ${activeRound.name}`, text: summary });
+      await navigator.share({ title: `توقعات كأس العالم - ${activeRound.name}`, text: summary });
     } catch (error) {
       if (error.name !== "AbortError") await copySummary();
     }

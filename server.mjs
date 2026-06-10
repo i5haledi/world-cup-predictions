@@ -8,22 +8,22 @@ const API_URL = "https://api.openligadb.de/getmatchdata/wm26/2026";
 const CACHE_TIME = 15 * 60 * 1000;
 
 const countryData = {
-  ARG: ["Argentina", "ar"], AUS: ["Australia", "au"], AUT: ["Austria", "at"],
-  BEL: ["Belgium", "be"], BIH: ["Bosnia and Herzegovina", "ba"], BRA: ["Brazil", "br"],
-  CAN: ["Canada", "ca"], CHE: ["Switzerland", "ch"], CIV: ["Cote d'Ivoire", "ci"],
-  COD: ["DR Congo", "cd"], COL: ["Colombia", "co"], CPV: ["Cape Verde", "cv"],
-  CUW: ["Curacao", "cw"], CZE: ["Czechia", "cz"], DEU: ["Germany", "de"],
-  DZA: ["Algeria", "dz"], ECU: ["Ecuador", "ec"], EGY: ["Egypt", "eg"],
-  ENG: ["England", "gb-eng"], ESP: ["Spain", "es"], FRA: ["France", "fr"],
-  GHA: ["Ghana", "gh"], HRV: ["Croatia", "hr"], HTI: ["Haiti", "ht"],
-  IRN: ["Iran", "ir"], IRQ: ["Iraq", "iq"], JOR: ["Jordan", "jo"],
-  JPN: ["Japan", "jp"], KOR: ["South Korea", "kr"], MAR: ["Morocco", "ma"],
-  MEX: ["Mexico", "mx"], NLD: ["Netherlands", "nl"], NOR: ["Norway", "no"],
-  NZL: ["New Zealand", "nz"], PAN: ["Panama", "pa"], PAR: ["Paraguay", "py"],
-  PRT: ["Portugal", "pt"], QAT: ["Qatar", "qa"], RSA: ["South Africa", "za"],
-  SAU: ["Saudi Arabia", "sa"], SCT: ["Scotland", "gb-sct"], SEN: ["Senegal", "sn"],
-  SWE: ["Sweden", "se"], TUN: ["Tunisia", "tn"], TUR: ["Turkey", "tr"],
-  URY: ["Uruguay", "uy"], USA: ["United States", "us"], UZB: ["Uzbekistan", "uz"],
+  ARG: ["الأرجنتين", "ar"], AUS: ["أستراليا", "au"], AUT: ["النمسا", "at"],
+  BEL: ["بلجيكا", "be"], BIH: ["البوسنة والهرسك", "ba"], BRA: ["البرازيل", "br"],
+  CAN: ["كندا", "ca"], CHE: ["سويسرا", "ch"], CIV: ["ساحل العاج", "ci"],
+  COD: ["الكونغو الديمقراطية", "cd"], COL: ["كولومبيا", "co"], CPV: ["الرأس الأخضر", "cv"],
+  CUW: ["كوراساو", "cw"], CZE: ["التشيك", "cz"], DEU: ["ألمانيا", "de"],
+  DZA: ["الجزائر", "dz"], ECU: ["الإكوادور", "ec"], EGY: ["مصر", "eg"],
+  ENG: ["إنجلترا", "gb-eng"], ESP: ["إسبانيا", "es"], FRA: ["فرنسا", "fr"],
+  GHA: ["غانا", "gh"], HRV: ["كرواتيا", "hr"], HTI: ["هايتي", "ht"],
+  IRN: ["إيران", "ir"], IRQ: ["العراق", "iq"], JOR: ["الأردن", "jo"],
+  JPN: ["اليابان", "jp"], KOR: ["كوريا الجنوبية", "kr"], MAR: ["المغرب", "ma"],
+  MEX: ["المكسيك", "mx"], NLD: ["هولندا", "nl"], NOR: ["النرويج", "no"],
+  NZL: ["نيوزيلندا", "nz"], PAN: ["بنما", "pa"], PAR: ["باراغواي", "py"],
+  PRT: ["البرتغال", "pt"], QAT: ["قطر", "qa"], RSA: ["جنوب أفريقيا", "za"],
+  SAU: ["السعودية", "sa"], SCT: ["اسكتلندا", "gb-sct"], SEN: ["السنغال", "sn"],
+  SWE: ["السويد", "se"], TUN: ["تونس", "tn"], TUR: ["تركيا", "tr"],
+  URY: ["الأوروغواي", "uy"], USA: ["الولايات المتحدة", "us"], UZB: ["أوزبكستان", "uz"],
 };
 
 const contentTypes = {
@@ -93,9 +93,9 @@ async function getMatches() {
       number: roundNumber,
       name:
         roundNumber <= 3
-          ? `Matchday ${roundNumber}`
-          : roundFixtures[0]?.group?.groupName || "Current round",
-      label: roundNumber <= 3 ? "Group stage" : "World Cup 2026",
+          ? `الجولة ${roundNumber}`
+          : `الدور ${roundNumber}`,
+      label: roundNumber <= 3 ? "دور المجموعات" : "كأس العالم 2026",
     },
     matches,
   };
