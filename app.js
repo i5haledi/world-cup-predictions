@@ -22,7 +22,6 @@ const downloadButton = document.querySelector("#download-button");
 const toast = document.querySelector("#toast");
 const roundName = document.querySelector("#round-name");
 const roundKicker = document.querySelector("#round-kicker");
-const dataStatus = document.querySelector("#data-status");
 
 playerName.value = state.name;
 
@@ -206,7 +205,8 @@ function drawText(context, text, x, y, options = {}) {
 
 async function loadCanvasImage(url) {
   try {
-    const response = await fetch(url);
+    const highResolutionUrl = url.replace("/w160/", "/w320/");
+    const response = await fetch(highResolutionUrl);
     if (!response.ok) return null;
     const blob = await response.blob();
     if ("createImageBitmap" in window) return await createImageBitmap(blob);
@@ -249,13 +249,17 @@ async function createPredictionImage() {
       loadCanvasImage(match.away.flag),
     ])
   );
+  const scale = 2;
   const width = 1080;
   const rowHeight = 80;
   const height = 220 + matches.length * rowHeight;
   const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = width * scale;
+  canvas.height = height * scale;
   const context = canvas.getContext("2d");
+  context.scale(scale, scale);
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
 
   context.fillStyle = "#070b0a";
   context.fillRect(0, 0, width, height);
@@ -304,7 +308,7 @@ async function createPredictionImage() {
     });
   });
 
-  return new Promise((resolve) => canvas.toBlob(resolve, "image/png", 0.95));
+  return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
 }
 
 function downloadImage() {
@@ -325,7 +329,6 @@ function showToast(message) {
 
 async function loadMatches() {
   renderLoading();
-  dataStatus.textContent = "جاري تحميل المباريات";
 
   try {
     const response = await fetch("/api/matches", { cache: "no-store" });
@@ -335,12 +338,10 @@ async function loadMatches() {
     activeRound = data.round;
     roundName.textContent = activeRound.name;
     roundKicker.textContent = activeRound.label;
-    dataStatus.textContent = data.cached ? "بيانات محفوظة مؤقتاً" : "بيانات مباشرة";
     renderMatches();
     updateProgress();
   } catch (error) {
     matches = [];
-    dataStatus.textContent = "خطأ في الاتصال";
     renderError(error.message);
     updateProgress();
   }
