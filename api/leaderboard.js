@@ -11,7 +11,7 @@ export default async function handler(request, response) {
     await ensureSchema();
     const sql = getSql();
     const [users, predictions, manualScores, fixtures] = await Promise.all([
-      sql`SELECT id, username FROM users ORDER BY created_at`,
+      sql`SELECT id, username FROM users WHERE role = 'user' ORDER BY created_at`,
       sql`SELECT user_id, round_number, scores FROM predictions`,
       sql`SELECT user_id, round_number, points FROM round_scores`,
       fetchFixtures(),

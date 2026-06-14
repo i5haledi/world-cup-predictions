@@ -8,7 +8,7 @@ let mode = "login";
 fetch("/api/auth/me", { cache: "no-store" })
   .then((response) => response.json())
   .then(({ user }) => {
-    if (user) window.location.replace("/");
+    if (user) window.location.replace(user.role === "admin" ? "/admin.html" : "/");
   })
   .catch(() => {});
 
@@ -38,7 +38,7 @@ form.addEventListener("submit", async (event) => {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "تعذر إكمال العملية.");
-    window.location.replace("/");
+    window.location.replace(data.user.role === "admin" ? "/admin.html" : "/");
   } catch (error) {
     message.textContent = error.message;
     submitButton.disabled = false;

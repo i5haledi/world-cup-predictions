@@ -473,11 +473,15 @@ async function startApp() {
     window.location.replace("/auth.html");
     return;
   }
+  if (user.role === "admin") {
+    window.location.replace("/admin.html");
+    return;
+  }
   currentUser = user;
   state.scores = loadUserState();
   accountName.textContent = user.username;
   submitUsername.textContent = user.username;
-  adminLink.hidden = user.role !== "admin";
+  adminLink.hidden = true;
 
   const savedResponse = await fetch("/api/predictions", { cache: "no-store" });
   if (savedResponse.ok) {

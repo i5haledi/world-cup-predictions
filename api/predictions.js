@@ -8,6 +8,9 @@ export default async function handler(request, response) {
   if (!allowMethod(request, response, ["GET", "POST"])) return;
   const session = requireSession(request, response);
   if (!session) return;
+  if (session.role === "admin") {
+    return response.status(403).json({ error: "حساب الآدمن مخصص للوحة التحكم فقط." });
+  }
 
   try {
     await ensureSchema();
