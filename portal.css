@@ -103,7 +103,8 @@ a { color: inherit; }
 .leader-row:nth-of-type(4) .rank { color: #c9895b; }
 .player-name { font-weight: 700; }
 .round-breakdown { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; color: var(--muted); font-size: 10px; }
-.points { color: var(--lime); font-family: Arial, sans-serif; font-size: 23px; font-weight: 800; text-align: left; }
+.points-heading, .points { justify-self: center; text-align: center; }
+.points { color: var(--lime); font-family: Arial, sans-serif; font-size: 23px; font-weight: 800; }
 .empty-state { padding: 60px 20px; color: var(--muted); text-align: center; }
 .admin-list { display: grid; gap: 10px; }
 .admin-user {
