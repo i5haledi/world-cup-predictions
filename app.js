@@ -1,12 +1,12 @@
 const STORAGE_KEY = "world-picks-2026";
-const state = loadState();
+const state = { scores: {} };
 let matches = [];
 let activeRound = null;
 let shareBlob = null;
 let roundTimer = null;
+let currentUser = null;
 
 const matchesList = document.querySelector("#matches-list");
-const playerName = document.querySelector("#player-name");
 const progressCount = document.querySelector("#progress-count");
 const progressBar = document.querySelector("#progress-bar");
 const progressTrack = document.querySelector(".progress-track");
@@ -23,24 +23,30 @@ const downloadButton = document.querySelector("#download-button");
 const toast = document.querySelector("#toast");
 const roundName = document.querySelector("#round-name");
 const roundKicker = document.querySelector("#round-kicker");
+const accountName = document.querySelector("#account-name");
+const submitUsername = document.querySelector("#submit-username");
+const adminLink = document.querySelector("#admin-link");
+const logoutButton = document.querySelector("#logout-button");
 
-playerName.value = state.name;
-
-function loadState() {
+function loadUserState() {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    const saved = JSON.parse(localStorage.getItem(`${STORAGE_KEY}:${currentUser.id}`));
     const scores = {};
     for (const [key, value] of Object.entries(saved?.scores || {})) {
       if (value && typeof value === "object") scores[key] = value;
     }
-    return { name: saved?.name || "", scores };
+    return scores;
   } catch {
-    return { name: "", scores: {} };
+    return {};
   }
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (!currentUser) return;
+  localStorage.setItem(
+    `${STORAGE_KEY}:${currentUser.id}`,
+    JSON.stringify({ scores: state.scores })
+  );
 }
 
 function escapeHtml(value) {
@@ -167,15 +173,14 @@ function updateProgress() {
   const completed = matches.filter(isComplete).length;
   const total = matches.length;
   const allComplete = total > 0 && completed === total;
-  const hasName = state.name.trim().length > 0;
   const isLocked = Boolean(activeRound?.locked);
 
   progressCount.textContent = `${completed} / ${total}`;
   progressBar.style.width = total ? `${(completed / total) * 100}%` : "0%";
   progressTrack.setAttribute("aria-valuemax", total);
   progressTrack.setAttribute("aria-valuenow", completed);
-  submitPanel.classList.toggle("ready", allComplete && hasName && !isLocked);
-  submitButton.disabled = !allComplete || !hasName || isLocked;
+  submitPanel.classList.toggle("ready", allComplete && !isLocked);
+  submitButton.disabled = !allComplete || isLocked;
 
   if (isLocked) {
     submitTitle.textContent = "أُغلقت توقعات هذه الجولة";
@@ -187,9 +192,6 @@ function updateProgress() {
     const remaining = total - completed;
     submitTitle.textContent = `متبقي ${remaining} ${remaining === 1 ? "مباراة" : "مباريات"}`;
     submitHint.textContent = "أدخل نتيجة رقمية لكل مباراة.";
-  } else if (!hasName) {
-    submitTitle.textContent = "اكتب اسمك للإرسال";
-    submitHint.textContent = "اكتملت جميع النتائج.";
   } else {
     submitTitle.textContent = "اكتملت جميع التوقعات";
     submitHint.textContent = "أنشئ صورة التوقعات وشاركها.";
@@ -297,7 +299,7 @@ async function createPredictionImage() {
 
   drawText(context, "توقعات كأس العالم 2026", width - 70, 72, { size: 42, weight: 700 });
   drawText(context, activeRound.name, width - 70, 116, { size: 25, color: "#58e29b", weight: 600 });
-  drawText(context, `اللاعب: ${state.name.trim()}`, width - 70, 172, { size: 29, weight: 600 });
+  drawText(context, `اللاعب: ${currentUser.username}`, width - 70, 172, { size: 29, weight: 600 });
 
   matches.forEach((match, index) => {
     const y = 202 + index * rowHeight;
@@ -345,7 +347,7 @@ function downloadImage() {
   const url = URL.createObjectURL(shareBlob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `توقعات-${state.name.trim() || "كأس-العالم"}.png`;
+  link.download = `توقعات-${currentUser.username}.png`;
   link.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
@@ -403,20 +405,35 @@ matchesList.addEventListener("input", (event) => {
   updateProgress();
 });
 
-playerName.addEventListener("input", () => {
-  state.name = playerName.value;
-  saveState();
-  updateProgress();
-});
-
 submitButton.addEventListener("click", async () => {
   submitButton.disabled = true;
-  submitLabel.textContent = "جاري إنشاء الصورة";
-  shareBlob = await createPredictionImage();
-  shareImage.src = URL.createObjectURL(shareBlob);
-  submitLabel.textContent = "إرسال التوقعات";
-  submitButton.disabled = false;
-  resultDialog.showModal();
+  submitLabel.textContent = "جاري حفظ التوقعات";
+  try {
+    const currentScores = Object.fromEntries(
+      matches.map((match) => [matchKey(match), scoreFor(match)])
+    );
+    const response = await fetch("/api/predictions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        roundNumber: activeRound.number,
+        scores: currentScores,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "تعذر حفظ التوقعات.");
+
+    submitLabel.textContent = "جاري إنشاء الصورة";
+    shareBlob = await createPredictionImage();
+    shareImage.src = URL.createObjectURL(shareBlob);
+    resultDialog.showModal();
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    submitLabel.textContent = "إرسال التوقعات";
+    submitButton.disabled = false;
+    updateProgress();
+  }
 });
 
 closeDialog.addEventListener("click", () => resultDialog.close());
@@ -426,7 +443,7 @@ resultDialog.addEventListener("click", (event) => {
 
 shareButton.addEventListener("click", async () => {
   if (!shareBlob) return;
-  const file = new File([shareBlob], `توقعات-${state.name.trim()}.png`, { type: "image/png" });
+  const file = new File([shareBlob], `توقعات-${currentUser.username}.png`, { type: "image/png" });
   if (navigator.share && navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({
@@ -443,6 +460,42 @@ shareButton.addEventListener("click", async () => {
 });
 
 downloadButton.addEventListener("click", downloadImage);
-renderLoading();
-updateProgress();
-loadMatches();
+
+logoutButton.addEventListener("click", async () => {
+  await fetch("/api/auth/logout", { method: "POST" });
+  window.location.replace("/auth.html");
+});
+
+async function startApp() {
+  const sessionResponse = await fetch("/api/auth/me", { cache: "no-store" });
+  const { user } = await sessionResponse.json();
+  if (!user) {
+    window.location.replace("/auth.html");
+    return;
+  }
+  currentUser = user;
+  state.scores = loadUserState();
+  accountName.textContent = user.username;
+  submitUsername.textContent = user.username;
+  adminLink.hidden = user.role !== "admin";
+
+  const savedResponse = await fetch("/api/predictions", { cache: "no-store" });
+  if (savedResponse.ok) {
+    const savedData = await savedResponse.json();
+    for (const prediction of savedData.predictions || []) {
+      const scores =
+        typeof prediction.scores === "string"
+          ? JSON.parse(prediction.scores)
+          : prediction.scores;
+      state.scores = { ...state.scores, ...scores };
+    }
+    saveState();
+  }
+  renderLoading();
+  updateProgress();
+  await loadMatches();
+}
+
+startApp().catch(() => {
+  window.location.replace("/auth.html");
+});

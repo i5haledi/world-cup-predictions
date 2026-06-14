@@ -21,6 +21,16 @@
     <div class="page-glow page-glow-two"></div>
 
     <main>
+      <nav class="app-nav">
+        <span id="account-name" class="account-name">...</span>
+        <div class="app-nav-links">
+          <a class="app-nav-link active" href="/">التوقعات</a>
+          <a class="app-nav-link" href="/leaderboard.html">الترتيب</a>
+          <a id="admin-link" class="app-nav-link" href="/admin.html" hidden>الآدمن</a>
+          <button id="logout-button" class="app-nav-link" type="button">خروج</button>
+        </div>
+      </nav>
+
       <section class="rules" aria-label="نظام النقاط">
         <div class="rule">
           <strong><span>1</span> نقطة</strong>
@@ -58,20 +68,15 @@
         <div id="matches-list" class="matches-list"></div>
       </section>
 
-      <section class="player-field">
-        <label for="player-name">الاسم</label>
-        <div class="name-input-wrap">
+      <section class="account-panel">
+        <div class="account-icon">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8Zm-7 18a7 7 0 0 1 14 0"/>
           </svg>
-          <input
-            id="player-name"
-            name="player-name"
-            type="text"
-            maxlength="30"
-            autocomplete="name"
-            placeholder="اكتب اسمك قبل الإرسال"
-          />
+        </div>
+        <div>
+          <span>سيتم حفظ التوقعات باسم</span>
+          <strong id="submit-username">...</strong>
         </div>
       </section>
 

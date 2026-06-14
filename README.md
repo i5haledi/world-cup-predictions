@@ -1,6 +1,6 @@
 # World Picks
 
-A mobile-first World Cup prediction card for a group of friends.
+A mobile-first Arabic World Cup prediction competition for a group of friends.
 
 ## Run it
 
@@ -21,6 +21,16 @@ The server loads the real 2026 World Cup schedule from the free
 [OpenLigaDB API](https://www.openligadb.de/). No API key is required. Nation
 flags are image assets provided by FlagCDN, not emoji.
 
+## Accounts and leaderboard
+
+- Users register with a username and password.
+- Passwords are hashed with Node.js `scrypt`.
+- Sessions use signed, HTTP-only cookies.
+- Predictions are stored in Neon PostgreSQL.
+- Exact scores award 3 points; a correct outcome awards 1 point.
+- Manual round scores override automatic scoring for that round.
+- The reserved admin username is configured through `ADMIN_USERNAME`.
+
 ## Current behavior
 
 - The current World Cup matchday is selected automatically.
@@ -30,6 +40,5 @@ flags are image assets provided by FlagCDN, not emoji.
 - On supported phones, Share opens the native share sheet. Otherwise, it opens
   WhatsApp with the prediction text ready to send.
 
-This version does not yet use user accounts or an organizer dashboard.
-Predictions are shared through the group chat rather than collected in a
-database.
+The app includes an admin page for assigning the first round's historical
+scores and a leaderboard page that combines manual and automatic points.

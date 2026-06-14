@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>إدارة النقاط | توقعات كأس العالم</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="portal.css" />
+  </head>
+  <body>
+    <main class="portal-shell">
+      <nav class="portal-nav">
+        <a class="portal-brand" href="/">توقعات كأس العالم 2026</a>
+        <div class="nav-links">
+          <a class="nav-link" href="/">التوقعات</a>
+          <a class="nav-link" href="/leaderboard.html">الترتيب</a>
+          <a class="nav-link active" href="/admin.html">الآدمن</a>
+          <button id="logout-button" class="logout-button" type="button">خروج</button>
+        </div>
+      </nav>
+      <header class="page-heading">
+        <span>صلاحيات الآدمن</span>
+        <h1>نقاط الجولة الأولى</h1>
+        <p>أدخل مجموع نقاط كل مستخدم في الجولة الأولى. القيمة المحفوظة هنا تعتمد مباشرة في جدول الترتيب.</p>
+      </header>
+      <div id="status-message" class="status-message"></div>
+      <section id="admin-list" class="admin-list">
+        <div class="loading">جاري تحميل المستخدمين...</div>
+      </section>
+    </main>
+    <script src="admin.js"></script>
+  </body>
+</html>
