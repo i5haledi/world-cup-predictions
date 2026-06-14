@@ -26,8 +26,11 @@ async function loadPage() {
     return;
   }
 
+  const players = data.leaderboard.filter(
+    (player) => player.username.toLocaleLowerCase("ar") !== "i5haledi"
+  );
   body.className = "";
-  body.innerHTML = data.leaderboard.map((player) => {
+  body.innerHTML = players.map((player) => {
     const rounds = Object.entries(player.rounds)
       .sort(([a], [b]) => Number(a) - Number(b))
       .map(([round, points]) => `<span>ج${round}: ${points}</span>`)

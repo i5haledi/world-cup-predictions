@@ -15,6 +15,19 @@ export default async function handler(request, response) {
   try {
     await ensureSchema();
     const sql = getSql();
+    const users = await sql`
+      SELECT role, username_key
+      FROM users
+      WHERE id = ${session.id}
+      LIMIT 1
+    `;
+    const user = users[0];
+    const adminUsername = String(process.env.ADMIN_USERNAME || "i5haledi")
+      .trim()
+      .toLocaleLowerCase("ar");
+    if (!user || user.role === "admin" || user.username_key === adminUsername) {
+      return response.status(403).json({ error: "حساب الآدمن مخصص للوحة التحكم فقط." });
+    }
 
     if (request.method === "GET") {
       const rows = await sql`

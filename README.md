@@ -28,7 +28,8 @@ flags are image assets provided by FlagCDN, not emoji.
 - Sessions use signed, HTTP-only cookies.
 - Predictions are stored in Neon PostgreSQL.
 - Exact scores award 3 points; a correct outcome awards 1 point.
-- Manual round scores override automatic scoring for that round.
+- Round 1 uses manual points because it predates the account system.
+- Round 2 onward is calculated automatically from final match results.
 - The reserved admin username is configured through `ADMIN_USERNAME`.
 
 ## Current behavior

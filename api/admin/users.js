@@ -19,6 +19,7 @@ export default async function handler(request, response) {
       FROM users u
       LEFT JOIN round_scores rs
         ON rs.user_id = u.id AND rs.round_number = 1
+      WHERE u.role = 'user'
       ORDER BY u.created_at
     `;
     return response.status(200).json({ users });

@@ -10,10 +10,22 @@ export default async function handler(request, response) {
   try {
     await ensureSchema();
     const sql = getSql();
+    const adminUsername = String(process.env.ADMIN_USERNAME || "i5haledi")
+      .trim()
+      .toLocaleLowerCase("ar");
     const [users, predictions, manualScores, fixtures] = await Promise.all([
-      sql`SELECT id, username FROM users WHERE role = 'user' ORDER BY created_at`,
+      sql`
+        SELECT id, username
+        FROM users
+        WHERE role = 'user' AND username_key <> ${adminUsername}
+        ORDER BY created_at
+      `,
       sql`SELECT user_id, round_number, scores FROM predictions`,
-      sql`SELECT user_id, round_number, points FROM round_scores`,
+      sql`
+        SELECT user_id, round_number, points
+        FROM round_scores
+        WHERE round_number = 1
+      `,
       fetchFixtures(),
     ]);
     const fixtureGroups = groupFixtures(fixtures);
@@ -29,16 +41,17 @@ export default async function handler(request, response) {
 
       for (const prediction of userPredictions) {
         const round = Number(prediction.round_number);
-        const manualKey = `${user.id}:${round}`;
-        rounds[round] = manualMap.has(manualKey)
-          ? manualMap.get(manualKey)
-          : calculateRoundPoints(prediction.scores, fixtureGroups.get(round) || []);
+        if (round === 1) continue;
+        rounds[round] = calculateRoundPoints(
+          prediction.scores,
+          fixtureGroups.get(round) || []
+        );
       }
 
       for (const score of manualScores.filter(
         (item) => String(item.user_id) === String(user.id)
       )) {
-        rounds[Number(score.round_number)] = Number(score.points);
+        rounds[1] = Number(score.points);
       }
 
       return {
