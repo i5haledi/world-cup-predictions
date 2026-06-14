@@ -5,6 +5,7 @@ let activeRound = null;
 let shareBlob = null;
 let roundTimer = null;
 let currentUser = null;
+const submittedRounds = new Set();
 
 const matchesList = document.querySelector("#matches-list");
 const progressCount = document.querySelector("#progress-count");
@@ -174,6 +175,7 @@ function updateProgress() {
   const total = matches.length;
   const allComplete = total > 0 && completed === total;
   const isLocked = Boolean(activeRound?.locked);
+  const isSubmitted = submittedRounds.has(Number(activeRound?.number));
 
   progressCount.textContent = `${completed} / ${total}`;
   progressBar.style.width = total ? `${(completed / total) * 100}%` : "0%";
@@ -193,9 +195,12 @@ function updateProgress() {
     submitTitle.textContent = `متبقي ${remaining} ${remaining === 1 ? "مباراة" : "مباريات"}`;
     submitHint.textContent = "أدخل نتيجة رقمية لكل مباراة.";
   } else {
-    submitTitle.textContent = "اكتملت جميع التوقعات";
-    submitHint.textContent = "أنشئ صورة التوقعات وشاركها.";
+    submitTitle.textContent = isSubmitted ? "توقعاتك محفوظة ويمكن تعديلها" : "اكتملت جميع التوقعات";
+    submitHint.textContent = isSubmitted
+      ? "عدّل أي نتيجة ثم اضغط تحديث. آخر نسخة قبل بداية الجولة هي المعتمدة."
+      : "احفظ توقعاتك وأنشئ صورة لمشاركتها.";
   }
+  submitLabel.textContent = isSubmitted ? "تحديث التوقعات" : "إرسال التوقعات";
 }
 
 function scheduleRoundClosure() {
@@ -422,6 +427,7 @@ submitButton.addEventListener("click", async () => {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "تعذر حفظ التوقعات.");
+    submittedRounds.add(Number(activeRound.number));
 
     submitLabel.textContent = "جاري إنشاء الصورة";
     shareBlob = await createPredictionImage();
@@ -430,7 +436,6 @@ submitButton.addEventListener("click", async () => {
   } catch (error) {
     showToast(error.message);
   } finally {
-    submitLabel.textContent = "إرسال التوقعات";
     submitButton.disabled = false;
     updateProgress();
   }
@@ -487,6 +492,7 @@ async function startApp() {
   if (savedResponse.ok) {
     const savedData = await savedResponse.json();
     for (const prediction of savedData.predictions || []) {
+      submittedRounds.add(Number(prediction.round_number));
       const scores =
         typeof prediction.scores === "string"
           ? JSON.parse(prediction.scores)
