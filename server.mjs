@@ -1,6 +1,7 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize } from "node:path";
+import { nextVisibilityChange, selectVisibleRounds } from "./api/_lib/fixtures.js";
 
 const port = 8000;
 const root = process.cwd();
@@ -48,26 +49,6 @@ function normalizeTeam(team) {
   };
 }
 
-function selectRound(fixtures) {
-  const now = Date.now();
-  const grouped = new Map();
-
-  for (const fixture of fixtures) {
-    const round = fixture.group?.groupOrderID || 1;
-    if (!grouped.has(round)) grouped.set(round, []);
-    grouped.get(round).push(fixture);
-  }
-
-  const orderedRounds = [...grouped.entries()].sort(([a], [b]) => a - b);
-  const roundsWithStart = orderedRounds.map(([round, games]) => ({
-    round,
-    games,
-    startsAt: Math.min(...games.map((game) => new Date(game.matchDateTimeUTC).getTime())),
-  }));
-  const availableRound = roundsWithStart.find(({ startsAt }) => startsAt > now);
-  return availableRound || { ...roundsWithStart.at(-1), locked: true };
-}
-
 async function getMatches() {
   const canUseCache = fixtureCache && Date.now() - fixtureCacheTime < CACHE_TIME;
   if (!canUseCache) {
@@ -80,31 +61,30 @@ async function getMatches() {
     fixtureCacheTime = Date.now();
   }
 
-  const selectedRound = selectRound(fixtureCache);
-  const roundNumber = selectedRound.round;
-  const roundFixtures = selectedRound.games;
-  const matches = roundFixtures
-    .sort((a, b) => new Date(a.matchDateTimeUTC) - new Date(b.matchDateTimeUTC))
-    .map((fixture) => ({
+  const now = Date.now();
+  const visibleRounds = selectVisibleRounds(fixtureCache, now);
+  const rounds = visibleRounds.map((round) => ({
+    number: round.round,
+    name: round.round <= 3 ? `الجولة ${round.round}` : `الدور ${round.round}`,
+    label: round.round <= 3 ? "دور المجموعات" : "كأس العالم 2026",
+    startsAt: new Date(round.startsAt).toISOString(),
+    matches: round.games.map((fixture) => ({
       id: fixture.matchID,
+      roundNumber: round.round,
       kickoff: fixture.matchDateTimeUTC,
+      locked: new Date(fixture.matchDateTimeUTC).getTime() <= now,
       home: normalizeTeam(fixture.team1),
       away: normalizeTeam(fixture.team2),
-    }));
+    })),
+  }));
+  const matches = rounds.flatMap((round) => round.matches);
+  const nextRefreshAt = nextVisibilityChange(fixtureCache, now);
 
   return {
-    round: {
-      number: roundNumber,
-      name:
-        roundNumber <= 3
-          ? `الجولة ${roundNumber}`
-          : `الدور ${roundNumber}`,
-      label: roundNumber <= 3 ? "دور المجموعات" : "كأس العالم 2026",
-      closesAt: new Date(selectedRound.startsAt).toISOString(),
-      serverTime: new Date().toISOString(),
-      locked: Boolean(selectedRound.locked),
-    },
+    rounds,
     matches,
+    serverTime: new Date(now).toISOString(),
+    nextRefreshAt: Number.isFinite(nextRefreshAt) ? new Date(nextRefreshAt).toISOString() : null,
     cached: canUseCache,
   };
 }

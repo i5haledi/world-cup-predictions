@@ -1,6 +1,6 @@
 import { allowMethod, requireSession } from "./_lib/auth.js";
 import { ensureSchema, getSql } from "./_lib/db.js";
-import { fetchFixtures, selectOpenRound } from "./_lib/fixtures.js";
+import { fetchFixtures, groupFixtures } from "./_lib/fixtures.js";
 import { noStore, readJsonBody } from "./_lib/http.js";
 
 export default async function handler(request, response) {
@@ -39,40 +39,87 @@ export default async function handler(request, response) {
       return response.status(200).json({ predictions: rows });
     }
 
-    const { roundNumber, scores } = readJsonBody(request);
+    const body = readJsonBody(request);
+    const submittedRounds = Array.isArray(body.rounds)
+      ? body.rounds
+      : [{ roundNumber: body.roundNumber, scores: body.scores }];
     const fixtures = await fetchFixtures();
-    const openRound = selectOpenRound(fixtures);
-    if (openRound.locked || Number(roundNumber) !== Number(openRound.round)) {
-      return response.status(409).json({ error: "أُغلق استقبال توقعات هذه الجولة." });
-    }
+    const fixtureGroups = groupFixtures(fixtures);
+    const now = Date.now();
+    const savedRounds = [];
 
-    const expectedIds = new Set(openRound.games.map((game) => String(game.matchID)));
-    const providedIds = Object.keys(scores || {});
-    const valid =
-      providedIds.length === expectedIds.size &&
-      providedIds.every((id) => {
+    for (const submittedRound of submittedRounds) {
+      const roundNumber = Number(submittedRound.roundNumber);
+      const scores = submittedRound.scores || {};
+      const roundFixtures = fixtureGroups.get(roundNumber) || [];
+      if (!roundFixtures.length) continue;
+
+      const existing = await sql`
+        SELECT scores
+        FROM predictions
+        WHERE user_id = ${session.id} AND round_number = ${roundNumber}
+        LIMIT 1
+      `;
+      const mergedScores = existing[0]?.scores
+        ? typeof existing[0].scores === "string"
+          ? JSON.parse(existing[0].scores)
+          : existing[0].scores
+        : {};
+
+      let updated = false;
+      for (const fixture of roundFixtures) {
+        const id = String(fixture.matchID);
+        const kickoff = new Date(fixture.matchDateTimeUTC).getTime();
         const score = scores[id];
-        return (
-          expectedIds.has(id) &&
+        if (!score) continue;
+        if (kickoff <= now) {
+          return response.status(409).json({
+            error: "لا يمكن تعديل توقع مباراة بدأت بالفعل.",
+          });
+        }
+        const valid =
           Number.isInteger(Number(score?.home)) &&
           Number.isInteger(Number(score?.away)) &&
           Number(score.home) >= 0 &&
           Number(score.away) >= 0 &&
           Number(score.home) <= 20 &&
-          Number(score.away) <= 20
-        );
+          Number(score.away) <= 20;
+        if (!valid) {
+          return response.status(400).json({ error: "يجب إدخال نتيجة صحيحة للمباريات المفتوحة." });
+        }
+        mergedScores[id] = {
+          home: String(Number(score.home)),
+          away: String(Number(score.away)),
+        };
+        updated = true;
+      }
+
+      const openFixtureIds = roundFixtures
+        .filter((fixture) => new Date(fixture.matchDateTimeUTC).getTime() > now)
+        .map((fixture) => String(fixture.matchID));
+      const missingOpenPrediction = openFixtureIds.some((id) => {
+        const score = mergedScores[id];
+        return score?.home === undefined || score?.home === "" || score?.away === undefined || score?.away === "";
       });
-    if (!valid) {
-      return response.status(400).json({ error: "يجب إدخال نتيجة صحيحة لجميع مباريات الجولة." });
+      if (missingOpenPrediction) {
+        return response.status(400).json({ error: "أكمل توقع كل المباريات التي لم تبدأ بعد." });
+      }
+
+      if (!updated) continue;
+
+      await sql`
+        INSERT INTO predictions (user_id, round_number, scores)
+        VALUES (${session.id}, ${roundNumber}, ${JSON.stringify(mergedScores)})
+        ON CONFLICT (user_id, round_number)
+        DO UPDATE SET scores = EXCLUDED.scores, submitted_at = NOW()
+      `;
+      savedRounds.push(roundNumber);
     }
 
-    await sql`
-      INSERT INTO predictions (user_id, round_number, scores)
-      VALUES (${session.id}, ${Number(roundNumber)}, ${JSON.stringify(scores)})
-      ON CONFLICT (user_id, round_number)
-      DO UPDATE SET scores = EXCLUDED.scores, submitted_at = NOW()
-    `;
-    return response.status(200).json({ ok: true });
+    if (!savedRounds.length) {
+      return response.status(400).json({ error: "لا توجد مباريات مفتوحة لحفظها." });
+    }
+    return response.status(200).json({ ok: true, savedRounds });
   } catch (error) {
     return response.status(500).json({ error: "تعذر حفظ التوقعات.", detail: error.message });
   }

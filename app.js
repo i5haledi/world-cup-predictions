@@ -1,10 +1,12 @@
 const STORAGE_KEY = "world-picks-2026";
 const state = { scores: {} };
 let matches = [];
-let activeRound = null;
+let visibleRounds = [];
 let shareBlob = null;
 let roundTimer = null;
 let currentUser = null;
+let serverTime = null;
+let nextRefreshAt = null;
 const submittedRounds = new Set();
 
 const matchesList = document.querySelector("#matches-list");
@@ -115,11 +117,27 @@ function renderError(message) {
 }
 
 function renderMatches() {
-  matchesList.innerHTML = matches.map((match, index) => {
+  if (!visibleRounds.length) {
+    matchesList.innerHTML = `
+      <div class="data-error">
+        <strong>لا توجد مباريات متاحة حالياً</strong>
+        <span>ستظهر الجولة التالية قبل انطلاقها بـ24 ساعة.</span>
+      </div>
+    `;
+    return;
+  }
+
+  matchesList.innerHTML = visibleRounds.map((round) => `
+    <section class="round-group">
+      <div class="round-group-heading">
+        <strong>${escapeHtml(round.name)}</strong>
+        <span>${escapeHtml(round.label)}</span>
+      </div>
+      ${round.matches.map((match, index) => {
     const score = scoreFor(match);
     const outcome = outcomeFor(match);
     return `
-      <article class="match-card ${outcome ? "completed" : ""}">
+      <article class="match-card ${outcome ? "completed" : ""} ${match.locked ? "locked" : ""}">
         <div class="team-side ${outcome === "home" ? "winner" : ""}">
           <span class="flag-frame">
             <img class="flag" src="${match.home.flag}" alt="علم ${escapeHtml(match.home.name)}" />
@@ -133,7 +151,7 @@ function renderMatches() {
             max="20"
             step="1"
             value="${score.home}"
-            ${activeRound.locked ? "disabled" : ""}
+            ${match.locked ? "disabled" : ""}
             data-match="${match.id}"
             data-team="home"
             aria-label="أهداف ${escapeHtml(match.home.name)}"
@@ -143,7 +161,7 @@ function renderMatches() {
         <div class="match-meta">
           <span class="match-number">المباراة ${index + 1}</span>
           <span class="kickoff">${formatKickoff(match.kickoff)}</span>
-          <span class="outcome-label">${outcome === "draw" ? "تعادل" : outcome ? "فوز" : "النتيجة"}</span>
+          <span class="outcome-label">${match.locked && !outcome ? "مقفلة" : outcome === "draw" ? "تعادل" : outcome ? "فوز" : "النتيجة"}</span>
         </div>
 
         <div class="team-side away ${outcome === "away" ? "winner" : ""}">
@@ -159,7 +177,7 @@ function renderMatches() {
             max="20"
             step="1"
             value="${score.away}"
-            ${activeRound.locked ? "disabled" : ""}
+            ${match.locked ? "disabled" : ""}
             data-match="${match.id}"
             data-team="away"
             aria-label="أهداف ${escapeHtml(match.away.name)}"
@@ -167,26 +185,30 @@ function renderMatches() {
         </div>
       </article>
     `;
-  }).join("");
+      }).join("")}
+    </section>
+  `).join("");
 }
 
 function updateProgress() {
-  const completed = matches.filter(isComplete).length;
-  const total = matches.length;
+  const openMatches = matches.filter((match) => !match.locked);
+  const completed = openMatches.filter(isComplete).length;
+  const total = openMatches.length;
   const allComplete = total > 0 && completed === total;
-  const isLocked = Boolean(activeRound?.locked);
-  const isSubmitted = submittedRounds.has(Number(activeRound?.number));
+  const isSubmitted =
+    visibleRounds.length > 0 &&
+    visibleRounds.every((round) => submittedRounds.has(Number(round.number)));
 
   progressCount.textContent = `${completed} / ${total}`;
   progressBar.style.width = total ? `${(completed / total) * 100}%` : "0%";
   progressTrack.setAttribute("aria-valuemax", total);
   progressTrack.setAttribute("aria-valuenow", completed);
-  submitPanel.classList.toggle("ready", allComplete && !isLocked);
-  submitButton.disabled = !allComplete || isLocked;
+  submitPanel.classList.toggle("ready", allComplete);
+  submitButton.disabled = !allComplete;
 
-  if (isLocked) {
-    submitTitle.textContent = "أُغلقت توقعات هذه الجولة";
-    submitHint.textContent = "بدأت أول مباراة ولا يمكن تعديل أو إرسال التوقعات.";
+  if (!total && matches.length) {
+    submitTitle.textContent = "كل المباريات الظاهرة مقفلة";
+    submitHint.textContent = "ستظهر مباريات جديدة قبل انطلاق الجولة التالية بـ24 ساعة.";
   } else if (!total) {
     submitTitle.textContent = "جاري تحميل المباريات";
     submitHint.textContent = "يتم جلب جدول المباريات مباشرة.";
@@ -205,12 +227,12 @@ function updateProgress() {
 
 function scheduleRoundClosure() {
   window.clearTimeout(roundTimer);
-  if (!activeRound?.closesAt || activeRound.locked) return;
+  if (!nextRefreshAt) return;
 
-  const serverTime = activeRound.serverTime
-    ? new Date(activeRound.serverTime).getTime()
+  const baseTime = serverTime
+    ? new Date(serverTime).getTime()
     : Date.now();
-  const delay = new Date(activeRound.closesAt).getTime() - serverTime;
+  const delay = new Date(nextRefreshAt).getTime() - baseTime;
   if (delay <= 0) {
     loadMatches();
     return;
@@ -218,9 +240,6 @@ function scheduleRoundClosure() {
 
   roundTimer = window.setTimeout(() => {
     submitButton.disabled = true;
-    matchesList.querySelectorAll(".score-input").forEach((input) => {
-      input.disabled = true;
-    });
     loadMatches();
   }, Math.min(delay + 250, 2147483647));
 }
@@ -303,7 +322,7 @@ async function createPredictionImage() {
   context.fillRect(0, 0, 12, height);
 
   drawText(context, "توقعات كأس العالم 2026", width - 70, 72, { size: 42, weight: 700 });
-  drawText(context, activeRound.name, width - 70, 116, { size: 25, color: "#58e29b", weight: 600 });
+  drawText(context, visibleRounds.map((round) => round.name).join(" / "), width - 70, 116, { size: 25, color: "#58e29b", weight: 600 });
   drawText(context, `اللاعب: ${currentUser.username}`, width - 70, 172, { size: 29, weight: 600 });
 
   matches.forEach((match, index) => {
@@ -370,10 +389,18 @@ async function loadMatches() {
     const response = await fetch("/api/matches", { cache: "no-store" });
     if (!response.ok) throw new Error("خدمة المباريات غير متاحة مؤقتاً.");
     const data = await response.json();
+    visibleRounds = data.rounds || [];
     matches = data.matches;
-    activeRound = data.round;
-    roundName.textContent = activeRound.name;
-    roundKicker.textContent = activeRound.label;
+    serverTime = data.serverTime;
+    nextRefreshAt = data.nextRefreshAt;
+    roundName.textContent =
+      visibleRounds.length === 1
+        ? visibleRounds[0].name
+        : visibleRounds.length
+          ? "المباريات المتاحة"
+          : "لا توجد مباريات متاحة";
+    roundKicker.textContent =
+      visibleRounds.length === 1 ? visibleRounds[0].label : "كأس العالم 2026";
     renderMatches();
     updateProgress();
     scheduleRoundClosure();
@@ -414,20 +441,25 @@ submitButton.addEventListener("click", async () => {
   submitButton.disabled = true;
   submitLabel.textContent = "جاري حفظ التوقعات";
   try {
-    const currentScores = Object.fromEntries(
-      matches.map((match) => [matchKey(match), scoreFor(match)])
-    );
+    const scoresByRound = new Map();
+    for (const match of matches.filter((item) => !item.locked)) {
+      const roundScores = scoresByRound.get(match.roundNumber) || {};
+      roundScores[matchKey(match)] = scoreFor(match);
+      scoresByRound.set(match.roundNumber, roundScores);
+    }
     const response = await fetch("/api/predictions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        roundNumber: activeRound.number,
-        scores: currentScores,
+        rounds: [...scoresByRound.entries()].map(([roundNumber, scores]) => ({
+          roundNumber,
+          scores,
+        })),
       }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "تعذر حفظ التوقعات.");
-    submittedRounds.add(Number(activeRound.number));
+    for (const roundNumber of data.savedRounds || []) submittedRounds.add(Number(roundNumber));
 
     submitLabel.textContent = "جاري إنشاء الصورة";
     shareBlob = await createPredictionImage();
@@ -452,7 +484,7 @@ shareButton.addEventListener("click", async () => {
   if (navigator.share && navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({
-        title: `توقعات كأس العالم - ${activeRound.name}`,
+        title: "توقعات كأس العالم",
         files: [file],
       });
       return;
