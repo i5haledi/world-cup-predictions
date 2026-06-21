@@ -136,9 +136,6 @@ a { color: inherit; }
   background: rgba(18,26,23,.72);
   opacity: .92;
 }
-.sponsor-logos img.sponsor-logo-white {
-  filter: brightness(0) invert(1);
-}
 .empty-state { padding: 60px 20px; color: var(--muted); text-align: center; }
 .admin-list { display: grid; gap: 10px; }
 .admin-user {
