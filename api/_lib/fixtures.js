@@ -88,10 +88,21 @@ export function calculateRoundPoints(predictionScores, fixtures) {
   for (const fixture of fixtures) {
     const actual = finalScore(fixture);
     const predicted = predictionScores?.[String(fixture.matchID)];
-    if (!actual || predicted?.home === "" || predicted?.away === "") continue;
+    if (
+      !actual ||
+      !predicted ||
+      predicted.home === "" ||
+      predicted.away === "" ||
+      predicted.home === undefined ||
+      predicted.away === undefined
+    ) {
+      continue;
+    }
 
     const predictedHome = Number(predicted.home);
     const predictedAway = Number(predicted.away);
+    if (!Number.isFinite(predictedHome) || !Number.isFinite(predictedAway)) continue;
+
     if (predictedHome === actual.home && predictedAway === actual.away) {
       points += 3;
       continue;
