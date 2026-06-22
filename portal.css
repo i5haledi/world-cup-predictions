@@ -205,10 +205,11 @@ a { color: inherit; }
 }
 .points-score-row {
   display: grid;
-  grid-template-columns: 56px minmax(0,1fr);
+  grid-template-columns: 1fr;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  justify-items: center;
+  gap: 5px;
+  padding: 8px 10px 10px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: rgba(9,14,12,.62);
@@ -216,13 +217,14 @@ a { color: inherit; }
 .points-score-row > span {
   color: var(--muted);
   font-size: 10px;
-  text-align: right;
+  text-align: center;
 }
 .points-score-pair {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 7px;
+  width: min(100%, 116px);
   color: var(--text);
   font-family: Arial, sans-serif;
   font-size: 18px;
@@ -231,6 +233,8 @@ a { color: inherit; }
 }
 .points-score-pair b { color: var(--lime); }
 .points-score-pair span { color: var(--muted); }
+.points-score-pair b:first-child { text-align: left; }
+.points-score-pair b:last-child { text-align: right; }
 .points-score-empty {
   color: var(--muted);
   font-family: inherit;
