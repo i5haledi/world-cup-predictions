@@ -151,6 +151,56 @@ a { color: inherit; }
 .admin-user small { display: block; margin-top: 3px; color: var(--muted); }
 .save-button { min-height: 46px; border: 0; border-radius: 11px; color: #09100d; background: var(--green); font-weight: 700; cursor: pointer; }
 .status-message { margin: 14px 0; color: var(--green); font-size: 12px; }
+.admin-predictions-section { margin-top: 34px; }
+.sub-heading { margin-bottom: 16px; }
+.sub-heading span { color: var(--green); font-size: 11px; font-weight: 700; }
+.sub-heading h2 { margin: 5px 0 7px; font-size: clamp(24px, 4vw, 34px); }
+.sub-heading p { margin: 0; color: var(--muted); line-height: 1.7; }
+.admin-predictions { display: grid; gap: 14px; }
+.admin-prediction-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(18,26,23,.86);
+}
+.prediction-user-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 17px;
+  background: #0a0f0d;
+}
+.prediction-user-head small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+.prediction-match-list { display: grid; }
+.prediction-match-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 96px;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 17px;
+  border-top: 1px solid var(--line);
+}
+.prediction-match-row.saved { background: rgba(88,226,155,.045); }
+.prediction-round { display: block; margin-bottom: 4px; color: var(--muted); font-size: 10px; }
+.prediction-score {
+  justify-self: center;
+  min-width: 76px;
+  padding: 7px 10px;
+  border-radius: 11px;
+  color: var(--lime);
+  background: rgba(215,244,92,.08);
+  font-family: Arial, sans-serif;
+  font-weight: 800;
+  text-align: center;
+}
+.prediction-match-row.missing .prediction-score {
+  color: var(--muted);
+  background: rgba(255,255,255,.04);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+}
 .loading { padding: 50px; color: var(--muted); text-align: center; }
 
 @media (max-width: 700px) {
@@ -162,4 +212,6 @@ a { color: inherit; }
   .sponsor-logos img { width: 112px; height: 56px; padding: 10px 13px; }
   .admin-user { grid-template-columns: minmax(0,1fr) 90px; }
   .admin-user .save-button { grid-column: 1 / -1; }
+  .prediction-match-row { grid-template-columns: 1fr; }
+  .prediction-score { justify-self: start; }
 }

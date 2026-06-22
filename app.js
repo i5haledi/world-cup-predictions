@@ -8,6 +8,7 @@ let currentUser = null;
 let serverTime = null;
 let nextRefreshAt = null;
 const submittedRounds = new Set();
+const autosaveTimers = new Map();
 
 const matchesList = document.querySelector("#matches-list");
 const progressCount = document.querySelector("#progress-count");
@@ -215,14 +216,12 @@ function updateProgress() {
   } else if (!allComplete) {
     const remaining = total - completed;
     submitTitle.textContent = `متبقي ${remaining} ${remaining === 1 ? "مباراة" : "مباريات"}`;
-    submitHint.textContent = "أدخل نتيجة رقمية لكل مباراة.";
+    submitHint.textContent = "كل مباراة مكتملة تُحفظ تلقائياً.";
   } else {
     submitTitle.textContent = isSubmitted ? "توقعاتك محفوظة ويمكن تعديلها" : "اكتملت جميع التوقعات";
-    submitHint.textContent = isSubmitted
-      ? "عدّل أي نتيجة ثم اضغط تحديث. آخر نسخة قبل بداية الجولة هي المعتمدة."
-      : "احفظ توقعاتك وأنشئ صورة لمشاركتها.";
+    submitHint.textContent = "يتم حفظ أي تعديل تلقائياً، ويمكنك إنشاء صورة للمشاركة.";
   }
-  submitLabel.textContent = isSubmitted ? "تحديث التوقعات" : "إرسال التوقعات";
+  submitLabel.textContent = "إنشاء صورة المشاركة";
 }
 
 function scheduleRoundClosure() {
@@ -382,6 +381,56 @@ function showToast(message) {
   window.setTimeout(() => toast.classList.remove("visible"), 2200);
 }
 
+function groupScoresByRound(targetMatches) {
+  const scoresByRound = new Map();
+  for (const match of targetMatches.filter((item) => !item.locked && isComplete(item))) {
+    const roundScores = scoresByRound.get(match.roundNumber) || {};
+    roundScores[matchKey(match)] = scoreFor(match);
+    scoresByRound.set(match.roundNumber, roundScores);
+  }
+  return scoresByRound;
+}
+
+async function savePredictionsForMatches(targetMatches) {
+  const scoresByRound = groupScoresByRound(targetMatches);
+  if (!scoresByRound.size) return { savedRounds: [] };
+
+  const response = await fetch("/api/predictions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      rounds: [...scoresByRound.entries()].map(([roundNumber, scores]) => ({
+        roundNumber,
+        scores,
+      })),
+    }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "تعذر حفظ التوقعات.");
+  for (const roundNumber of data.savedRounds || []) submittedRounds.add(Number(roundNumber));
+  return data;
+}
+
+function queueAutosave(match) {
+  if (!match || match.locked || !isComplete(match)) return;
+  const key = matchKey(match);
+  window.clearTimeout(autosaveTimers.get(key));
+  autosaveTimers.set(
+    key,
+    window.setTimeout(async () => {
+      try {
+        await savePredictionsForMatches([match]);
+        showToast("تم حفظ التوقع تلقائياً");
+        updateProgress();
+      } catch (error) {
+        showToast(error.message);
+      } finally {
+        autosaveTimers.delete(key);
+      }
+    }, 650)
+  );
+}
+
 async function loadMatches() {
   renderLoading();
 
@@ -435,32 +484,16 @@ matchesList.addEventListener("input", (event) => {
   card.querySelector(".outcome-label").textContent =
     outcome === "draw" ? "تعادل" : outcome ? "فوز" : "النتيجة";
   updateProgress();
+  queueAutosave(match);
 });
 
 submitButton.addEventListener("click", async () => {
   submitButton.disabled = true;
-  submitLabel.textContent = "جاري حفظ التوقعات";
+  submitLabel.textContent = "جاري تجهيز الصورة";
   try {
-    const scoresByRound = new Map();
-    for (const match of matches.filter((item) => !item.locked)) {
-      const roundScores = scoresByRound.get(match.roundNumber) || {};
-      roundScores[matchKey(match)] = scoreFor(match);
-      scoresByRound.set(match.roundNumber, roundScores);
-    }
-    const response = await fetch("/api/predictions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        rounds: [...scoresByRound.entries()].map(([roundNumber, scores]) => ({
-          roundNumber,
-          scores,
-        })),
-      }),
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "تعذر حفظ التوقعات.");
-    for (const roundNumber of data.savedRounds || []) submittedRounds.add(Number(roundNumber));
-
+    for (const timer of autosaveTimers.values()) window.clearTimeout(timer);
+    autosaveTimers.clear();
+    await savePredictionsForMatches(matches);
     submitLabel.textContent = "جاري إنشاء الصورة";
     shareBlob = await createPredictionImage();
     shareImage.src = URL.createObjectURL(shareBlob);

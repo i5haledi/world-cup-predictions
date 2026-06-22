@@ -78,6 +78,10 @@ export default async function handler(request, response) {
           });
         }
         const valid =
+          score?.home !== "" &&
+          score?.away !== "" &&
+          score?.home !== undefined &&
+          score?.away !== undefined &&
           Number.isInteger(Number(score?.home)) &&
           Number.isInteger(Number(score?.away)) &&
           Number(score.home) >= 0 &&
@@ -92,17 +96,6 @@ export default async function handler(request, response) {
           away: String(Number(score.away)),
         };
         updated = true;
-      }
-
-      const openFixtureIds = roundFixtures
-        .filter((fixture) => new Date(fixture.matchDateTimeUTC).getTime() > now)
-        .map((fixture) => String(fixture.matchID));
-      const missingOpenPrediction = openFixtureIds.some((id) => {
-        const score = mergedScores[id];
-        return score?.home === undefined || score?.home === "" || score?.away === undefined || score?.away === "";
-      });
-      if (missingOpenPrediction) {
-        return response.status(400).json({ error: "أكمل توقع كل المباريات التي لم تبدأ بعد." });
       }
 
       if (!updated) continue;

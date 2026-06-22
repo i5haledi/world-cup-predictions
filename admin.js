@@ -1,12 +1,26 @@
 const list = document.querySelector("#admin-list");
+const predictionsPanel = document.querySelector("#admin-predictions");
 const statusMessage = document.querySelector("#status-message");
 
-async function loadUsers() {
+function formatKickoff(value) {
+  return new Intl.DateTimeFormat("ar-SA", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+async function loadAdminPage() {
   const sessionResponse = await fetch("/api/auth/me", { cache: "no-store" });
   const { user } = await sessionResponse.json();
   if (!user) return window.location.replace("/auth.html");
   if (user.role !== "admin") return window.location.replace("/leaderboard.html");
 
+  await Promise.all([loadUsers(), loadPredictions()]);
+}
+
+async function loadUsers() {
   const response = await fetch("/api/admin/users", { cache: "no-store" });
   const data = await response.json();
   if (!response.ok) {
@@ -30,6 +44,53 @@ async function loadUsers() {
       <button class="save-button" type="button" data-user-id="${item.id}">حفظ</button>
     </article>
   `).join("");
+}
+
+async function loadPredictions() {
+  const response = await fetch("/api/admin/predictions", { cache: "no-store" });
+  const data = await response.json();
+  if (!response.ok) {
+    predictionsPanel.innerHTML = `<div class="empty-state">${data.error}</div>`;
+    return;
+  }
+
+  if (!data.rounds?.length || !data.users?.length) {
+    predictionsPanel.innerHTML = '<div class="empty-state">لا توجد توقعات محفوظة حتى الآن.</div>';
+    return;
+  }
+
+  const matches = data.rounds.flatMap((round) =>
+    round.matches.map((match) => ({ ...match, roundName: round.name }))
+  );
+  predictionsPanel.innerHTML = data.users.map((player) => {
+    const completed = matches.filter((match) => player.predictions?.[match.id]).length;
+    return `
+      <article class="admin-prediction-card">
+        <header class="prediction-user-head">
+          <div>
+            <strong>${escapeHtml(player.username)}</strong>
+            <small>${completed} / ${matches.length} مباراة محفوظة</small>
+          </div>
+        </header>
+        <div class="prediction-match-list">
+          ${matches.map((match) => {
+            const prediction = player.predictions?.[match.id];
+            return `
+              <div class="prediction-match-row ${prediction ? "saved" : "missing"}">
+                <div>
+                  <span class="prediction-round">${escapeHtml(match.roundName)} - ${formatKickoff(match.kickoff)}</span>
+                  <strong>${escapeHtml(match.home)} × ${escapeHtml(match.away)}</strong>
+                </div>
+                <span class="prediction-score">
+                  ${prediction ? `${escapeHtml(prediction.home)} - ${escapeHtml(prediction.away)}` : "لم يتوقع"}
+                </span>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </article>
+    `;
+  }).join("");
 }
 
 function escapeHtml(value) {
@@ -63,6 +124,7 @@ document.querySelector("#logout-button").addEventListener("click", async () => {
   window.location.replace("/auth.html");
 });
 
-loadUsers().catch(() => {
+loadAdminPage().catch(() => {
   list.innerHTML = '<div class="empty-state">تعذر الاتصال بالخادم.</div>';
+  predictionsPanel.innerHTML = '<div class="empty-state">تعذر الاتصال بالخادم.</div>';
 });
