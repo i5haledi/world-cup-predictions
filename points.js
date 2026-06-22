@@ -23,9 +23,14 @@ function formatKickoff(value) {
   }).format(new Date(value));
 }
 
-function scoreText(score) {
-  if (!score) return "لا يوجد";
-  return `${escapeHtml(score.home)} - ${escapeHtml(score.away)}`;
+function scoreDetails(match, score) {
+  if (!score) return '<strong class="score-empty">لا يوجد</strong>';
+  return `
+    <strong class="score-detail">
+      <span>${escapeHtml(match.home)}: <b dir="ltr">${escapeHtml(score.home)}</b></span>
+      <span>${escapeHtml(match.away)}: <b dir="ltr">${escapeHtml(score.away)}</b></span>
+    </strong>
+  `;
 }
 
 function statusCopy(match) {
@@ -82,11 +87,11 @@ function renderRound() {
             <div class="points-score-grid">
               <div>
                 <span>توقعك</span>
-                <strong dir="ltr">${scoreText(match.predicted)}</strong>
+                ${scoreDetails(match, match.predicted)}
               </div>
               <div>
                 <span>النتيجة</span>
-                <strong dir="ltr">${scoreText(match.actual)}</strong>
+                ${scoreDetails(match, match.actual)}
               </div>
               <div class="points-earned">
                 <span>${statusCopy(match)}</span>

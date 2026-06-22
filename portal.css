@@ -188,6 +188,24 @@ a { color: inherit; }
 }
 .points-score-grid span { display: block; color: var(--muted); font-size: 10px; }
 .points-score-grid strong { display: block; margin-top: 4px; color: var(--text); font-family: Arial, sans-serif; font-size: 18px; }
+.points-score-grid .score-detail {
+  display: grid;
+  gap: 4px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+}
+.points-score-grid .score-detail b {
+  color: var(--lime);
+  font-family: Arial, sans-serif;
+  font-size: 15px;
+}
+.points-score-grid .score-empty {
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 13px;
+}
 .points-earned { text-align: center; }
 .points-earned strong { color: var(--lime); font-size: 26px; }
 .points-earned span { color: var(--green); }
