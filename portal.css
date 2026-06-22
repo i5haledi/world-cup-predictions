@@ -259,17 +259,15 @@ a { color: inherit; }
   font-size: 13px;
 }
 .points-earned {
-  display: inline-grid;
-  grid-template-columns: auto auto;
+  display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 4px 10px;
+  justify-content: center;
+  padding: 5px 12px;
   border-radius: 999px;
   background: rgba(88,226,155,.08);
   text-align: center;
 }
-.points-earned strong { color: var(--lime); font-size: 22px; }
-.points-earned span { color: var(--green); }
+.points-earned strong { color: var(--lime); font-size: 16px; }
 .powered-by {
   margin-top: 26px;
   padding: 22px 16px 0;
@@ -399,7 +397,7 @@ a { color: inherit; }
   .points-score-row > span { text-align: center; }
   .points-score-pair { width: min(100%, 74px); font-size: 14px; }
   .points-earned { padding: 4px 8px; }
-  .points-earned strong { font-size: 20px; }
+  .points-earned strong { font-size: 14px; }
   .sponsor-logos { gap: 10px; }
   .sponsor-logos img { width: 112px; height: 56px; padding: 10px 13px; }
   .admin-user { grid-template-columns: minmax(0,1fr) 90px; }

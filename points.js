@@ -34,14 +34,8 @@ function scorePair(score) {
   `;
 }
 
-function statusCopy(match) {
-  if (match.status === "scored" && match.points === 3) return "نتيجة صحيحة";
-  if (match.status === "scored" && match.points === 1) return "توقع صحيح";
-  if (match.status === "scored") return "لم تكسب نقاط";
-  if (match.status === "missed") return "لم تتوقع";
-  if (match.status === "pending_result") return "بانتظار النتيجة";
-  if (match.status === "saved") return "محفوظ";
-  return "لم يتوقع";
+function pointsCopy(points) {
+  return `${points} ${points === 1 ? "نقطة" : "نقاط"}`;
 }
 
 function renderFilters() {
@@ -100,8 +94,7 @@ function renderRound() {
                 </div>
               </div>
               <div class="points-earned">
-                <span>${statusCopy(match)}</span>
-                <strong>${match.points}</strong>
+                <strong>${pointsCopy(match.points)}</strong>
               </div>
             </div>
             <div class="points-team-side away">
