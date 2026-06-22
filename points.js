@@ -82,6 +82,9 @@ function renderRound() {
         ${round.matches.map((match) => `
           <div class="points-match-card ${escapeHtml(match.status)}">
             <div class="points-team-side">
+              <span class="points-flag-frame">
+                <img class="points-flag" src="${escapeHtml(match.homeFlag)}" alt="علم ${escapeHtml(match.home)}" />
+              </span>
               <span class="points-team-name">${escapeHtml(match.home)}</span>
             </div>
             <div class="points-match-center">
@@ -102,6 +105,9 @@ function renderRound() {
               </div>
             </div>
             <div class="points-team-side away">
+              <span class="points-flag-frame">
+                <img class="points-flag" src="${escapeHtml(match.awayFlag)}" alt="علم ${escapeHtml(match.away)}" />
+              </span>
               <span class="points-team-name">${escapeHtml(match.away)}</span>
             </div>
           </div>

@@ -4,22 +4,22 @@ import { fetchFixtures, finalScore, groupFixtures, selectVisibleRounds } from ".
 import { noStore } from "./_lib/http.js";
 
 const countryData = {
-  ARG: "الأرجنتين", AUS: "أستراليا", AUT: "النمسا",
-  BEL: "بلجيكا", BIH: "البوسنة والهرسك", BRA: "البرازيل",
-  CAN: "كندا", CHE: "سويسرا", CIV: "ساحل العاج",
-  COD: "الكونغو الديمقراطية", COL: "كولومبيا", CPV: "الرأس الأخضر",
-  CUW: "كوراساو", CZE: "التشيك", DEU: "ألمانيا", GER: "ألمانيا",
-  DZA: "الجزائر", ECU: "الإكوادور", EGY: "مصر",
-  ENG: "إنجلترا", ESP: "إسبانيا", FRA: "فرنسا",
-  GHA: "غانا", HRV: "كرواتيا", HTI: "هايتي",
-  IRN: "إيران", IRQ: "العراق", JOR: "الأردن",
-  JPN: "اليابان", KOR: "كوريا الجنوبية", MAR: "المغرب",
-  MEX: "المكسيك", NLD: "هولندا", NOR: "النرويج",
-  NZL: "نيوزيلندا", PAN: "بنما", PAR: "باراغواي",
-  PRT: "البرتغال", QAT: "قطر", RSA: "جنوب أفريقيا",
-  SAU: "السعودية", SCT: "اسكتلندا", SEN: "السنغال",
-  SWE: "السويد", TUN: "تونس", TUR: "تركيا",
-  URY: "الأوروغواي", USA: "الولايات المتحدة", UZB: "أوزبكستان",
+  ARG: ["الأرجنتين", "ar"], AUS: ["أستراليا", "au"], AUT: ["النمسا", "at"],
+  BEL: ["بلجيكا", "be"], BIH: ["البوسنة والهرسك", "ba"], BRA: ["البرازيل", "br"],
+  CAN: ["كندا", "ca"], CHE: ["سويسرا", "ch"], CIV: ["ساحل العاج", "ci"],
+  COD: ["الكونغو الديمقراطية", "cd"], COL: ["كولومبيا", "co"], CPV: ["الرأس الأخضر", "cv"],
+  CUW: ["كوراساو", "cw"], CZE: ["التشيك", "cz"], DEU: ["ألمانيا", "de"], GER: ["ألمانيا", "de"],
+  DZA: ["الجزائر", "dz"], ECU: ["الإكوادور", "ec"], EGY: ["مصر", "eg"],
+  ENG: ["إنجلترا", "gb-eng"], ESP: ["إسبانيا", "es"], FRA: ["فرنسا", "fr"],
+  GHA: ["غانا", "gh"], HRV: ["كرواتيا", "hr"], HTI: ["هايتي", "ht"],
+  IRN: ["إيران", "ir"], IRQ: ["العراق", "iq"], JOR: ["الأردن", "jo"],
+  JPN: ["اليابان", "jp"], KOR: ["كوريا الجنوبية", "kr"], MAR: ["المغرب", "ma"],
+  MEX: ["المكسيك", "mx"], NLD: ["هولندا", "nl"], NOR: ["النرويج", "no"],
+  NZL: ["نيوزيلندا", "nz"], PAN: ["بنما", "pa"], PAR: ["باراغواي", "py"],
+  PRT: ["البرتغال", "pt"], QAT: ["قطر", "qa"], RSA: ["جنوب أفريقيا", "za"],
+  SAU: ["السعودية", "sa"], SCT: ["اسكتلندا", "gb-sct"], SEN: ["السنغال", "sn"],
+  SWE: ["السويد", "se"], TUN: ["تونس", "tn"], TUR: ["تركيا", "tr"],
+  URY: ["الأوروغواي", "uy"], USA: ["الولايات المتحدة", "us"], UZB: ["أوزبكستان", "uz"],
 };
 
 function cleanScores(scores) {
@@ -34,8 +34,14 @@ function cleanScores(scores) {
   return scores;
 }
 
-function teamName(team) {
-  return countryData[team?.shortName] || team?.teamName || team?.shortName || "منتخب";
+function normalizeTeam(team) {
+  const [name, flagCode] = countryData[team?.shortName] || [team?.teamName || team?.shortName || "منتخب", null];
+  return {
+    name,
+    flag: flagCode
+      ? `https://flagcdn.com/w160/${flagCode}.png`
+      : team?.teamIconUrl?.replace(/^http:/, "https:") || "",
+  };
 }
 
 function roundName(round) {
@@ -116,11 +122,15 @@ export default async function handler(request, response) {
             const predicted = scores[String(fixture.matchID)] || null;
             const actual = finalScore(fixture);
             const points = roundNumber === 1 ? 0 : matchPoints(predicted, actual);
+            const home = normalizeTeam(fixture.team1);
+            const away = normalizeTeam(fixture.team2);
             return {
               id: String(fixture.matchID),
               kickoff: fixture.matchDateTimeUTC,
-              home: teamName(fixture.team1),
-              away: teamName(fixture.team2),
+              home: home.name,
+              away: away.name,
+              homeFlag: home.flag,
+              awayFlag: away.flag,
               predicted,
               actual,
               points,

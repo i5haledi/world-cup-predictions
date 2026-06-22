@@ -177,12 +177,30 @@ a { color: inherit; }
 .points-team-side {
   display: grid;
   min-height: 68px;
+  gap: 7px;
   place-items: center;
   padding: 9px;
   border-radius: 14px;
   background: rgba(9,14,12,.5);
 }
 .points-team-side.away { text-align: left; }
+.points-flag-frame {
+  display: grid;
+  width: 46px;
+  height: 32px;
+  overflow: hidden;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 7px;
+  background: #202723;
+  box-shadow: 0 6px 16px rgba(0,0,0,.22);
+}
+.points-flag {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .points-team-name {
   overflow: hidden;
   max-width: 100%;
@@ -372,8 +390,9 @@ a { color: inherit; }
   .leaderboard-head, .leader-row { grid-template-columns: 44px minmax(0,1fr) 70px; padding: 14px 12px; }
   .points-summary { grid-template-columns: 1fr; }
   .points-match-card { grid-template-columns: minmax(0,1fr) 86px minmax(0,1fr); gap: 6px; padding: 10px 7px; }
-  .points-team-side { min-height: 104px; padding: 7px 4px; text-align: center; }
+  .points-team-side { min-height: 104px; gap: 6px; padding: 7px 4px; text-align: center; }
   .points-team-side.away { text-align: center; }
+  .points-flag-frame { width: 42px; height: 30px; }
   .points-team-name { max-width: 88px; font-size: 11px; white-space: normal; }
   .points-match-center { gap: 5px; }
   .points-score-row { grid-template-columns: 1fr; gap: 2px; padding: 6px; }
