@@ -176,7 +176,7 @@ a { color: inherit; }
 .prediction-match-list { display: grid; }
 .prediction-match-row {
   display: grid;
-  grid-template-columns: minmax(0,1fr) 96px;
+  grid-template-columns: minmax(0,1fr) 180px;
   align-items: center;
   gap: 12px;
   padding: 13px 17px;
@@ -194,6 +194,20 @@ a { color: inherit; }
   font-family: Arial, sans-serif;
   font-weight: 800;
   text-align: center;
+}
+.prediction-score-detail {
+  display: grid;
+  gap: 4px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+}
+.prediction-score-detail strong {
+  color: var(--lime);
+  font-family: Arial, sans-serif;
+  font-size: 14px;
 }
 .prediction-match-row.missing .prediction-score {
   color: var(--muted);

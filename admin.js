@@ -89,9 +89,12 @@ async function loadPredictions() {
                   <span class="prediction-round">${escapeHtml(match.roundName)} - ${formatKickoff(match.kickoff)}</span>
                   <strong>${escapeHtml(match.home)} × ${escapeHtml(match.away)}</strong>
                 </div>
-                <span class="prediction-score" dir="ltr">
-                  ${prediction ? `${escapeHtml(prediction.home)} - ${escapeHtml(prediction.away)}` : "لم يتوقع"}
-                </span>
+                ${prediction ? `
+                  <span class="prediction-score prediction-score-detail">
+                    <span>${escapeHtml(match.home)}: <strong dir="ltr">${escapeHtml(prediction.home)}</strong></span>
+                    <span>${escapeHtml(match.away)}: <strong dir="ltr">${escapeHtml(prediction.away)}</strong></span>
+                  </span>
+                ` : '<span class="prediction-score">لم يتوقع</span>'}
               </div>
             `;
           }).join("")}
