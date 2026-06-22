@@ -23,12 +23,13 @@ function formatKickoff(value) {
   }).format(new Date(value));
 }
 
-function scoreDetails(match, score) {
-  if (!score) return '<strong class="score-empty">لا يوجد</strong>';
+function scorePair(score) {
+  if (!score) return '<strong class="points-score-empty">لا يوجد</strong>';
   return `
-    <strong class="score-detail">
-      <span>${escapeHtml(match.home)}: <b dir="ltr">${escapeHtml(score.home)}</b></span>
-      <span>${escapeHtml(match.away)}: <b dir="ltr">${escapeHtml(score.away)}</b></span>
+    <strong class="points-score-pair" aria-label="${escapeHtml(score.home)} - ${escapeHtml(score.away)}">
+      <b>${escapeHtml(score.home)}</b>
+      <span>-</span>
+      <b>${escapeHtml(score.away)}</b>
     </strong>
   `;
 }
@@ -80,23 +81,28 @@ function renderRound() {
       <div class="points-match-list">
         ${round.matches.map((match) => `
           <div class="points-match-card ${escapeHtml(match.status)}">
-            <div class="points-match-main">
-              <span>${formatKickoff(match.kickoff)}</span>
-              <strong>${escapeHtml(match.home)} × ${escapeHtml(match.away)}</strong>
+            <div class="points-team-side">
+              <span class="points-team-name">${escapeHtml(match.home)}</span>
             </div>
-            <div class="points-score-grid">
-              <div>
-                <span>توقعك</span>
-                ${scoreDetails(match, match.predicted)}
-              </div>
-              <div>
-                <span>النتيجة</span>
-                ${scoreDetails(match, match.actual)}
+            <div class="points-match-center">
+              <span class="points-kickoff">${formatKickoff(match.kickoff)}</span>
+              <div class="points-score-rows">
+                <div class="points-score-row">
+                  <span>توقعك</span>
+                  ${scorePair(match.predicted)}
+                </div>
+                <div class="points-score-row">
+                  <span>النتيجة</span>
+                  ${scorePair(match.actual)}
+                </div>
               </div>
               <div class="points-earned">
                 <span>${statusCopy(match)}</span>
                 <strong>${match.points}</strong>
               </div>
+            </div>
+            <div class="points-team-side away">
+              <span class="points-team-name">${escapeHtml(match.away)}</span>
             </div>
           </div>
         `).join("")}
