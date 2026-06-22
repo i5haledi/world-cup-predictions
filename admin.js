@@ -32,6 +32,8 @@ async function loadUsers() {
       <div>
         <strong>${escapeHtml(item.username)}</strong>
         <small>${item.role === "admin" ? "آدمن" : "مستخدم"}</small>
+        <small class="admin-total-points">المجموع الحالي: ${Number(item.total_points || 0)} نقطة</small>
+        <small>${formatRounds(item.rounds)}</small>
       </div>
       <input
         class="score-field"
@@ -44,6 +46,12 @@ async function loadUsers() {
       <button class="save-button" type="button" data-user-id="${item.id}">حفظ</button>
     </article>
   `).join("");
+}
+
+function formatRounds(rounds = {}) {
+  const entries = Object.entries(rounds).sort(([a], [b]) => Number(a) - Number(b));
+  if (!entries.length) return "لا توجد نقاط بعد";
+  return entries.map(([round, points]) => `ج${round}: ${Number(points)}`).join(" | ");
 }
 
 async function loadPredictions() {
@@ -117,6 +125,7 @@ list.addEventListener("click", async (event) => {
   const data = await response.json();
   statusMessage.textContent = response.ok ? "تم حفظ النقاط." : data.error;
   button.disabled = false;
+  if (response.ok) loadUsers();
 });
 
 document.querySelector("#logout-button").addEventListener("click", async () => {

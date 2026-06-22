@@ -149,6 +149,7 @@ a { color: inherit; }
   background: var(--raised);
 }
 .admin-user small { display: block; margin-top: 3px; color: var(--muted); }
+.admin-total-points { color: var(--lime) !important; font-weight: 700; }
 .save-button { min-height: 46px; border: 0; border-radius: 11px; color: #09100d; background: var(--green); font-weight: 700; cursor: pointer; }
 .status-message { margin: 14px 0; color: var(--green); font-size: 12px; }
 .admin-predictions-section { margin-top: 34px; }
