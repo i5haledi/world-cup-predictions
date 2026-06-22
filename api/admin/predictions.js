@@ -3,6 +3,25 @@ import { ensureSchema, getSql } from "../_lib/db.js";
 import { fetchFixtures, groupFixtures, selectVisibleRounds } from "../_lib/fixtures.js";
 import { noStore } from "../_lib/http.js";
 
+const countryData = {
+  ARG: ["الأرجنتين"], AUS: ["أستراليا"], AUT: ["النمسا"],
+  BEL: ["بلجيكا"], BIH: ["البوسنة والهرسك"], BRA: ["البرازيل"],
+  CAN: ["كندا"], CHE: ["سويسرا"], CIV: ["ساحل العاج"],
+  COD: ["الكونغو الديمقراطية"], COL: ["كولومبيا"], CPV: ["الرأس الأخضر"],
+  CUW: ["كوراساو"], CZE: ["التشيك"], DEU: ["ألمانيا"],
+  DZA: ["الجزائر"], ECU: ["الإكوادور"], EGY: ["مصر"],
+  ENG: ["إنجلترا"], ESP: ["إسبانيا"], FRA: ["فرنسا"],
+  GHA: ["غانا"], HRV: ["كرواتيا"], HTI: ["هايتي"],
+  IRN: ["إيران"], IRQ: ["العراق"], JOR: ["الأردن"],
+  JPN: ["اليابان"], KOR: ["كوريا الجنوبية"], MAR: ["المغرب"],
+  MEX: ["المكسيك"], NLD: ["هولندا"], NOR: ["النرويج"],
+  NZL: ["نيوزيلندا"], PAN: ["بنما"], PAR: ["باراغواي"],
+  PRT: ["البرتغال"], QAT: ["قطر"], RSA: ["جنوب أفريقيا"],
+  SAU: ["السعودية"], SCT: ["اسكتلندا"], SEN: ["السنغال"],
+  SWE: ["السويد"], TUN: ["تونس"], TUR: ["تركيا"],
+  URY: ["الأوروغواي"], USA: ["الولايات المتحدة"], UZB: ["أوزبكستان"],
+};
+
 function cleanScores(scores) {
   if (!scores) return {};
   if (typeof scores === "string") {
@@ -16,7 +35,7 @@ function cleanScores(scores) {
 }
 
 function teamName(team) {
-  return team?.teamName || team?.shortName || "منتخب";
+  return countryData[team?.shortName]?.[0] || team?.teamName || team?.shortName || "منتخب";
 }
 
 function roundName(round) {
