@@ -50,7 +50,7 @@ export default async function handler(request, response) {
   try {
     await ensureSchema();
     const sql = getSql();
-    const [users, predictions, fixtures] = await Promise.all([
+    const [users, predictions, events, fixtures] = await Promise.all([
       sql`
         SELECT id, username
         FROM users
@@ -58,9 +58,14 @@ export default async function handler(request, response) {
         ORDER BY created_at
       `,
       sql`
-        SELECT user_id, round_number, scores, submitted_at
+        SELECT user_id, round_number, scores, submitted_at, created_at, updated_at
         FROM predictions
         ORDER BY round_number, submitted_at
+      `,
+      sql`
+        SELECT user_id, round_number, match_id, home, away, action, created_at
+        FROM prediction_events
+        ORDER BY created_at
       `,
       fetchFixtures(),
     ]);
@@ -89,17 +94,34 @@ export default async function handler(request, response) {
           })),
       }));
 
+    const eventsByUserMatch = new Map();
+    for (const event of events) {
+      const key = `${event.user_id}:${event.match_id}`;
+      const matchEvents = eventsByUserMatch.get(key) || [];
+      matchEvents.push({
+        action: event.action,
+        home: String(event.home),
+        away: String(event.away),
+        createdAt: event.created_at,
+      });
+      eventsByUserMatch.set(key, matchEvents);
+    }
+
     const predictionsByUser = new Map();
     for (const prediction of predictions) {
       const userPredictions = predictionsByUser.get(String(prediction.user_id)) || {};
       const scores = cleanScores(prediction.scores);
       for (const [matchId, score] of Object.entries(scores)) {
         if (!score || score.home === undefined || score.away === undefined) continue;
+        const matchEvents = eventsByUserMatch.get(`${prediction.user_id}:${matchId}`) || [];
         userPredictions[String(matchId)] = {
           home: String(score.home),
           away: String(score.away),
           roundNumber: Number(prediction.round_number),
+          createdAt: matchEvents[0]?.createdAt || prediction.created_at || prediction.submitted_at,
+          updatedAt: matchEvents.at(-1)?.createdAt || prediction.updated_at || prediction.submitted_at,
           submittedAt: prediction.submitted_at,
+          events: matchEvents,
         };
       }
       predictionsByUser.set(String(prediction.user_id), userPredictions);

@@ -34,6 +34,13 @@ export async function ensureSchema() {
     )
   `;
 
+  await sql`ALTER TABLE predictions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ`;
+  await sql`ALTER TABLE predictions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ`;
+  await sql`UPDATE predictions SET created_at = submitted_at WHERE created_at IS NULL`;
+  await sql`UPDATE predictions SET updated_at = submitted_at WHERE updated_at IS NULL`;
+  await sql`ALTER TABLE predictions ALTER COLUMN created_at SET DEFAULT NOW()`;
+  await sql`ALTER TABLE predictions ALTER COLUMN updated_at SET DEFAULT NOW()`;
+
   await sql`
     CREATE TABLE IF NOT EXISTS round_scores (
       id BIGSERIAL PRIMARY KEY,
@@ -44,6 +51,23 @@ export async function ensureSchema() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE(user_id, round_number)
     )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS prediction_events (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      round_number INTEGER NOT NULL,
+      match_id TEXT NOT NULL,
+      home TEXT NOT NULL,
+      away TEXT NOT NULL,
+      action VARCHAR(10) NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS prediction_events_user_match_idx
+    ON prediction_events (user_id, match_id, created_at)
   `;
 
   initialized = true;

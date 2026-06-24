@@ -11,6 +11,16 @@ function formatKickoff(value) {
   }).format(new Date(value));
 }
 
+function formatDateTime(value) {
+  if (!value) return "غير متوفر";
+  return new Intl.DateTimeFormat("ar-SA", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
 async function loadAdminPage() {
   const sessionResponse = await fetch("/api/auth/me", { cache: "no-store" });
   const { user } = await sessionResponse.json();
@@ -93,6 +103,13 @@ async function loadPredictions() {
                   <span class="prediction-score prediction-score-detail">
                     <span>${escapeHtml(match.home)}: <strong dir="ltr">${escapeHtml(prediction.home)}</strong></span>
                     <span>${escapeHtml(match.away)}: <strong dir="ltr">${escapeHtml(prediction.away)}</strong></span>
+                    <small>أضيف: ${formatDateTime(prediction.createdAt)}</small>
+                    <small>آخر تحديث: ${formatDateTime(prediction.updatedAt)}</small>
+                    ${prediction.events?.length ? `
+                      <small class="prediction-history">
+                        ${prediction.events.map((item) => `${item.action === "create" ? "إضافة" : "تحديث"} ${formatDateTime(item.createdAt)} (${escapeHtml(item.home)}-${escapeHtml(item.away)})`).join(" · ")}
+                      </small>
+                    ` : ""}
                   </span>
                 ` : '<span class="prediction-score">لم يتوقع</span>'}
               </div>

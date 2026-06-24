@@ -50,9 +50,18 @@ export default async function handler(request, response) {
 
     for (const submittedRound of submittedRounds) {
       const roundNumber = Number(submittedRound.roundNumber);
+      if (!Number.isInteger(roundNumber) || roundNumber < 1) {
+        return response.status(400).json({ error: "الجولة غير صحيحة." });
+      }
       const scores = submittedRound.scores || {};
       const roundFixtures = fixtureGroups.get(roundNumber) || [];
       if (!roundFixtures.length) continue;
+      const submittedMatchIds = Object.keys(scores);
+      const roundFixtureIds = new Set(roundFixtures.map((fixture) => String(fixture.matchID)));
+      const unknownMatchId = submittedMatchIds.find((id) => !roundFixtureIds.has(String(id)));
+      if (unknownMatchId) {
+        return response.status(400).json({ error: "المباراة لا تنتمي لهذه الجولة." });
+      }
 
       const existing = await sql`
         SELECT scores
@@ -66,13 +75,16 @@ export default async function handler(request, response) {
           : existing[0].scores
         : {};
 
-      let updated = false;
+      let touched = false;
+      let changed = false;
+      const events = [];
       for (const fixture of roundFixtures) {
         const id = String(fixture.matchID);
         const kickoff = new Date(fixture.matchDateTimeUTC).getTime();
         const score = scores[id];
         if (!score) continue;
-        if (kickoff <= now) {
+        touched = true;
+        if (!Number.isFinite(kickoff) || kickoff <= now || fixture.matchIsFinished) {
           return response.status(409).json({
             error: "لا يمكن تعديل توقع مباراة بدأت بالفعل.",
           });
@@ -91,21 +103,50 @@ export default async function handler(request, response) {
         if (!valid) {
           return response.status(400).json({ error: "يجب إدخال نتيجة صحيحة للمباريات المفتوحة." });
         }
-        mergedScores[id] = {
+        const nextScore = {
           home: String(Number(score.home)),
           away: String(Number(score.away)),
         };
-        updated = true;
+        const previousScore = mergedScores[id];
+        const isChanged =
+          previousScore?.home !== nextScore.home ||
+          previousScore?.away !== nextScore.away;
+        if (!isChanged) continue;
+
+        mergedScores[id] = nextScore;
+        changed = true;
+        events.push({
+          matchId: id,
+          home: nextScore.home,
+          away: nextScore.away,
+          action: previousScore ? "update" : "create",
+        });
       }
 
-      if (!updated) continue;
+      if (!touched) continue;
 
-      await sql`
-        INSERT INTO predictions (user_id, round_number, scores)
-        VALUES (${session.id}, ${roundNumber}, ${JSON.stringify(mergedScores)})
-        ON CONFLICT (user_id, round_number)
-        DO UPDATE SET scores = EXCLUDED.scores, submitted_at = NOW()
-      `;
+      if (changed) {
+        await sql`
+          INSERT INTO predictions (user_id, round_number, scores, created_at, updated_at, submitted_at)
+          VALUES (${session.id}, ${roundNumber}, ${JSON.stringify(mergedScores)}, NOW(), NOW(), NOW())
+          ON CONFLICT (user_id, round_number)
+          DO UPDATE SET scores = EXCLUDED.scores, updated_at = NOW(), submitted_at = NOW()
+        `;
+
+        for (const event of events) {
+          await sql`
+            INSERT INTO prediction_events (user_id, round_number, match_id, home, away, action)
+            VALUES (
+              ${session.id},
+              ${roundNumber},
+              ${event.matchId},
+              ${event.home},
+              ${event.away},
+              ${event.action}
+            )
+          `;
+        }
+      }
       savedRounds.push(roundNumber);
     }
 

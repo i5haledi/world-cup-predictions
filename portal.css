@@ -372,6 +372,15 @@ a { color: inherit; }
   font-family: Arial, sans-serif;
   font-size: 14px;
 }
+.prediction-score-detail small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.prediction-history {
+  max-width: 220px;
+  overflow-wrap: anywhere;
+}
 .prediction-match-row.missing .prediction-score {
   color: var(--muted);
   background: rgba(255,255,255,.04);
