@@ -33,7 +33,10 @@ async function loadPage() {
   body.innerHTML = players.map((player) => {
     const rounds = Object.entries(player.rounds)
       .sort(([a], [b]) => Number(a) - Number(b))
-      .map(([round, points]) => `<span>ج${round}: ${points}</span>`)
+      .map(([round, points]) => {
+        const label = data.roundNames?.[round] || `الجولة ${round}`;
+        return `<span>${escapeHtml(label)}: ${points}</span>`;
+      })
       .join("");
     return `
       <div class="leader-row ${String(player.id) === String(currentUser.id) ? "me" : ""}">

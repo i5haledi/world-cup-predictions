@@ -1,6 +1,6 @@
 import { allowMethod } from "./_lib/auth.js";
 import { ensureSchema, getSql } from "./_lib/db.js";
-import { calculateRoundPoints, fetchFixtures, groupFixtures } from "./_lib/fixtures.js";
+import { calculateRoundPoints, fetchFixtures, groupFixtures, roundName } from "./_lib/fixtures.js";
 import { noStore } from "./_lib/http.js";
 
 export default async function handler(request, response) {
@@ -29,8 +29,11 @@ export default async function handler(request, response) {
       fetchFixtures(),
     ]);
     const fixtureGroups = groupFixtures(fixtures);
-    const manualMap = new Map(
-      manualScores.map((score) => [`${score.user_id}:${score.round_number}`, Number(score.points)])
+    const roundNames = Object.fromEntries(
+      [...fixtureGroups.entries()].map(([round, games]) => [
+        String(round),
+        roundName(Number(round), games[0]?.group?.groupName),
+      ])
     );
 
     const leaderboard = users.map((user) => {
@@ -64,6 +67,7 @@ export default async function handler(request, response) {
 
     leaderboard.sort((a, b) => b.points - a.points || a.username.localeCompare(b.username, "ar"));
     return response.status(200).json({
+      roundNames,
       leaderboard: leaderboard.map((entry, index) => ({ ...entry, rank: index + 1 })),
     });
   } catch (error) {
