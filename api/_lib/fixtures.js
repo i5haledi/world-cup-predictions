@@ -1,5 +1,20 @@
 const API_URL = "https://api.openligadb.de/getmatchdata/wm26/2026";
 const NEXT_ROUND_VISIBILITY_MS = 24 * 60 * 60 * 1000;
+const knockoutRoundNames = {
+  4: "دور الـ32",
+  5: "دور الـ16",
+  6: "ربع النهائي",
+  7: "نصف النهائي",
+  8: "النهائي",
+};
+
+const knockoutGroupNamePatterns = [
+  [/sechzehntel/i, "دور الـ32"],
+  [/achtel/i, "دور الـ16"],
+  [/viertel/i, "ربع النهائي"],
+  [/halb/i, "نصف النهائي"],
+  [/^finale$/i, "النهائي"],
+];
 
 export async function fetchFixtures() {
   const response = await fetch(API_URL, {
@@ -69,6 +84,23 @@ export function nextVisibilityChange(fixtures, now = Date.now()) {
     .map((round) => round.startsAt - NEXT_ROUND_VISIBILITY_MS)
     .filter((time) => time > now);
   return Math.min(...futureKickoffs, ...futureRoundRevealTimes);
+}
+
+export function roundName(round, groupName = "") {
+  const cleanRound = Number(round);
+  if (cleanRound <= 3) return `الجولة ${cleanRound}`;
+  const cleanGroupName = String(groupName || "").trim();
+  const groupNameMatch = knockoutGroupNamePatterns.find(([pattern]) =>
+    pattern.test(cleanGroupName)
+  );
+  if (groupNameMatch) {
+    return groupNameMatch[1];
+  }
+  return knockoutRoundNames[cleanRound] || `الدور ${cleanRound}`;
+}
+
+export function roundLabel(round) {
+  return Number(round) <= 3 ? "دور المجموعات" : "كأس العالم 2026";
 }
 
 export function finalScore(fixture) {

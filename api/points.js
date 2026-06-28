@@ -1,26 +1,8 @@
 import { allowMethod, requireSession } from "./_lib/auth.js";
 import { ensureSchema, getSql } from "./_lib/db.js";
-import { fetchFixtures, finalScore, groupFixtures, selectVisibleRounds } from "./_lib/fixtures.js";
+import { fetchFixtures, finalScore, groupFixtures, roundName, selectVisibleRounds } from "./_lib/fixtures.js";
 import { noStore } from "./_lib/http.js";
-
-const countryData = {
-  ARG: ["الأرجنتين", "ar"], AUS: ["أستراليا", "au"], AUT: ["النمسا", "at"],
-  BEL: ["بلجيكا", "be"], BIH: ["البوسنة والهرسك", "ba"], BRA: ["البرازيل", "br"],
-  CAN: ["كندا", "ca"], CHE: ["سويسرا", "ch"], CIV: ["ساحل العاج", "ci"],
-  COD: ["الكونغو الديمقراطية", "cd"], COL: ["كولومبيا", "co"], CPV: ["الرأس الأخضر", "cv"],
-  CUW: ["كوراساو", "cw"], CZE: ["التشيك", "cz"], DEU: ["ألمانيا", "de"], GER: ["ألمانيا", "de"],
-  DZA: ["الجزائر", "dz"], ECU: ["الإكوادور", "ec"], EGY: ["مصر", "eg"],
-  ENG: ["إنجلترا", "gb-eng"], ESP: ["إسبانيا", "es"], FRA: ["فرنسا", "fr"],
-  GHA: ["غانا", "gh"], HRV: ["كرواتيا", "hr"], HTI: ["هايتي", "ht"],
-  IRN: ["إيران", "ir"], IRQ: ["العراق", "iq"], JOR: ["الأردن", "jo"],
-  JPN: ["اليابان", "jp"], KOR: ["كوريا الجنوبية", "kr"], MAR: ["المغرب", "ma"],
-  MEX: ["المكسيك", "mx"], NLD: ["هولندا", "nl"], NOR: ["النرويج", "no"],
-  NZL: ["نيوزيلندا", "nz"], PAN: ["بنما", "pa"], PAR: ["باراغواي", "py"],
-  PRT: ["البرتغال", "pt"], QAT: ["قطر", "qa"], RSA: ["جنوب أفريقيا", "za"],
-  SAU: ["السعودية", "sa"], SCT: ["اسكتلندا", "gb-sct"], SEN: ["السنغال", "sn"],
-  SWE: ["السويد", "se"], TUN: ["تونس", "tn"], TUR: ["تركيا", "tr"],
-  URY: ["الأوروغواي", "uy"], USA: ["الولايات المتحدة", "us"], UZB: ["أوزبكستان", "uz"],
-};
+import { normalizeTeam } from "./_lib/teams.js";
 
 function cleanScores(scores) {
   if (!scores) return {};
@@ -32,20 +14,6 @@ function cleanScores(scores) {
     }
   }
   return scores;
-}
-
-function normalizeTeam(team) {
-  const [name, flagCode] = countryData[team?.shortName] || [team?.teamName || team?.shortName || "منتخب", null];
-  return {
-    name,
-    flag: flagCode
-      ? `https://flagcdn.com/w160/${flagCode}.png`
-      : team?.teamIconUrl?.replace(/^http:/, "https:") || "",
-  };
-}
-
-function roundName(round) {
-  return round <= 3 ? `الجولة ${round}` : `الدور ${round}`;
 }
 
 function matchPoints(predicted, actual) {
@@ -122,8 +90,8 @@ export default async function handler(request, response) {
             const predicted = scores[String(fixture.matchID)] || null;
             const actual = finalScore(fixture);
             const points = roundNumber === 1 ? 0 : matchPoints(predicted, actual);
-            const home = normalizeTeam(fixture.team1);
-            const away = normalizeTeam(fixture.team2);
+            const home = normalizeTeam(fixture, "team1");
+            const away = normalizeTeam(fixture, "team2");
             return {
               id: String(fixture.matchID),
               kickoff: fixture.matchDateTimeUTC,
@@ -144,7 +112,7 @@ export default async function handler(request, response) {
 
         return {
           number: roundNumber,
-          name: roundName(roundNumber),
+          name: roundName(roundNumber, games[0]?.group?.groupName),
           manualPoints: manualPoints ?? null,
           totalPoints,
           matches,

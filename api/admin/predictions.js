@@ -1,26 +1,8 @@
 import { allowMethod, requireSession } from "../_lib/auth.js";
 import { ensureSchema, getSql } from "../_lib/db.js";
-import { fetchFixtures, groupFixtures, selectVisibleRounds } from "../_lib/fixtures.js";
+import { fetchFixtures, groupFixtures, roundName, selectVisibleRounds } from "../_lib/fixtures.js";
 import { noStore } from "../_lib/http.js";
-
-const countryData = {
-  ARG: ["الأرجنتين"], AUS: ["أستراليا"], AUT: ["النمسا"],
-  BEL: ["بلجيكا"], BIH: ["البوسنة والهرسك"], BRA: ["البرازيل"],
-  CAN: ["كندا"], CHE: ["سويسرا"], CIV: ["ساحل العاج"],
-  COD: ["الكونغو الديمقراطية"], COL: ["كولومبيا"], CPV: ["الرأس الأخضر"],
-  CUW: ["كوراساو"], CZE: ["التشيك"], DEU: ["ألمانيا"], GER: ["ألمانيا"],
-  DZA: ["الجزائر"], ECU: ["الإكوادور"], EGY: ["مصر"],
-  ENG: ["إنجلترا"], ESP: ["إسبانيا"], FRA: ["فرنسا"],
-  GHA: ["غانا"], HRV: ["كرواتيا"], HTI: ["هايتي"],
-  IRN: ["إيران"], IRQ: ["العراق"], JOR: ["الأردن"],
-  JPN: ["اليابان"], KOR: ["كوريا الجنوبية"], MAR: ["المغرب"],
-  MEX: ["المكسيك"], NLD: ["هولندا"], NOR: ["النرويج"],
-  NZL: ["نيوزيلندا"], PAN: ["بنما"], PAR: ["باراغواي"],
-  PRT: ["البرتغال"], QAT: ["قطر"], RSA: ["جنوب أفريقيا"],
-  SAU: ["السعودية"], SCT: ["اسكتلندا"], SEN: ["السنغال"],
-  SWE: ["السويد"], TUN: ["تونس"], TUR: ["تركيا"],
-  URY: ["الأوروغواي"], USA: ["الولايات المتحدة"], UZB: ["أوزبكستان"],
-};
+import { normalizeTeam } from "../_lib/teams.js";
 
 function cleanScores(scores) {
   if (!scores) return {};
@@ -32,14 +14,6 @@ function cleanScores(scores) {
     }
   }
   return scores;
-}
-
-function teamName(team) {
-  return countryData[team?.shortName]?.[0] || team?.teamName || team?.shortName || "منتخب";
-}
-
-function roundName(round) {
-  return round <= 3 ? `الجولة ${round}` : `الدور ${round}`;
 }
 
 export default async function handler(request, response) {
@@ -83,14 +57,14 @@ export default async function handler(request, response) {
       .sort(([a], [b]) => Number(a) - Number(b))
       .map(([round, games]) => ({
         number: Number(round),
-        name: roundName(Number(round)),
+        name: roundName(Number(round), games[0]?.group?.groupName),
         matches: [...games]
           .sort((a, b) => new Date(a.matchDateTimeUTC) - new Date(b.matchDateTimeUTC))
           .map((fixture) => ({
             id: String(fixture.matchID),
             kickoff: fixture.matchDateTimeUTC,
-            home: teamName(fixture.team1),
-            away: teamName(fixture.team2),
+            home: normalizeTeam(fixture, "team1").name,
+            away: normalizeTeam(fixture, "team2").name,
           })),
       }));
 
